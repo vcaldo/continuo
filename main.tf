@@ -47,72 +47,25 @@ resource "linode_instance" "continuo" {
     new_relic_license_key = var.new_relic_license_key
     new_relic_account_id  = var.new_relic_account_id
     new_relic_region      = var.new_relic_region
-    restore_backup        = var.restore_from_backup ? "true" : "false"
   }
 
-  # Wait for SSH to be available
+  # Wait for SSH and StackScript to complete
   provisioner "remote-exec" {
-    inline = ["echo 'SSH is ready'"]
+    inline = [
+      "echo 'Waiting for StackScript to complete...'",
+      "while ! sudo grep -q 'OpenClaw installed' /var/log/stackscript-debug.log 2>/dev/null; do echo 'Still waiting...'; sleep 10; done",
+      "echo 'StackScript completed!'"
+    ]
 
     connection {
       type        = "ssh"
       user        = var.admin_username
       private_key = file(var.ssh_private_key_path)
       host        = tolist(self.ipv4)[0]
-      timeout     = "5m"
+      timeout     = "15m"
     }
   }
 
-  # Upload restore script
-  provisioner "file" {
-    source      = "${path.module}/scripts/restore.sh"
-    destination = "/tmp/restore.sh"
-
-    connection {
-      type        = "ssh"
-      user        = var.admin_username
-      private_key = file(var.ssh_private_key_path)
-      host        = tolist(self.ipv4)[0]
-    }
-  }
-}
-
-# Upload backup files when restore mode is enabled
-resource "null_resource" "backup_upload" {
-  count = var.restore_from_backup ? 1 : 0
-
-  depends_on = [linode_instance.continuo]
-
-  # Re-run when backup changes
-  triggers = {
-    instance_id = linode_instance.continuo.id
-    backup_hash = var.restore_from_backup ? filemd5("${path.module}/backup/latest/manifest.json") : "none"
-  }
-
-  # Create restore directory
-  provisioner "remote-exec" {
-    inline = ["mkdir -p /home/${var.admin_username}/.restore"]
-
-    connection {
-      type        = "ssh"
-      user        = var.admin_username
-      private_key = file(var.ssh_private_key_path)
-      host        = tolist(linode_instance.continuo.ipv4)[0]
-    }
-  }
-
-  # Upload backup directory contents
-  provisioner "file" {
-    source      = "${path.module}/backup/latest/"
-    destination = "/home/${var.admin_username}/.restore"
-
-    connection {
-      type        = "ssh"
-      user        = var.admin_username
-      private_key = file(var.ssh_private_key_path)
-      host        = tolist(linode_instance.continuo.ipv4)[0]
-    }
-  }
 }
 
 resource "linode_firewall" "continuo" {

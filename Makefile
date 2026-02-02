@@ -1,4 +1,4 @@
-.PHONY: plan apply destroy ssh connect init backup backup-encrypt backup-list restore-check
+.PHONY: plan apply destroy ssh connect init backup backup-encrypt backup-list restore-check restore
 
 init:
 	terraform init
@@ -66,3 +66,23 @@ restore-check:
 	@echo ""
 	@echo "Backup contents:"
 	@find backup/latest -type f | head -20
+
+# Restore backup to running VM
+restore:
+	@echo "Restoring backup to remote VM..."
+	@test -f backup/latest/manifest.json || (echo "ERROR: No backup found. Run 'make backup' first." && exit 1)
+	@IP=$$(terraform output -raw instance_ip) && \
+	USER=$$(terraform output -raw admin_username) && \
+	echo "Target: $$USER@$$IP" && \
+	echo "" && \
+	echo "Backup manifest:" && \
+	cat backup/latest/manifest.json && \
+	echo "" && \
+	ssh $$USER@$$IP "mkdir -p ~/.restore" && \
+	echo "Uploading backup files..." && \
+	scp -r backup/latest/* $$USER@$$IP:~/.restore/ && \
+	echo "Uploading restore script..." && \
+	scp scripts/restore.sh $$USER@$$IP:/tmp/restore.sh && \
+	echo "Running restore..." && \
+	ssh $$USER@$$IP "chmod +x /tmp/restore.sh && sudo ADMIN_USER=$$USER /tmp/restore.sh" && \
+	echo "Restore completed!"

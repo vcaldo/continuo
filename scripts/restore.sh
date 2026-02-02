@@ -112,7 +112,17 @@ else
 fi
 
 # ============================================================================
-# 5. CLEANUP
+# 5. RESTART OPENCLAW GATEWAY
+# ============================================================================
+echo "Restarting OpenClaw gateway..."
+
+su - "${ADMIN_USER}" -c 'source ~/.bashrc && openclaw gateway stop' 2>/dev/null || true
+su - "${ADMIN_USER}" -c 'source ~/.bashrc && openclaw gateway install' || true
+su - "${ADMIN_USER}" -c 'source ~/.bashrc && openclaw gateway start' || true
+echo "  - OpenClaw gateway restarted"
+
+# ============================================================================
+# 6. CLEANUP
 # ============================================================================
 echo "Cleaning up restore directory..."
 rm -rf "$RESTORE_DIR"

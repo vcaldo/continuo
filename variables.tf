@@ -34,12 +34,6 @@ variable "new_relic_region" {
   default     = "US"
 }
 
-variable "restore_from_backup" {
-  description = "Whether to restore OpenClaw from backup during provisioning"
-  type        = bool
-  default     = false
-}
-
 variable "ssh_private_key_path" {
   description = "Path to SSH private key for provisioner connections"
   type        = string
