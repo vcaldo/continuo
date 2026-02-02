@@ -14,3 +14,22 @@ variable "admin_username" {
   type        = string
   default     = "admin"
 }
+
+variable "new_relic_license_key" {
+  description = "New Relic license key for infrastructure monitoring"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "new_relic_account_id" {
+  description = "New Relic account ID"
+  type        = string
+  default     = ""
+}
+
+variable "new_relic_region" {
+  description = "New Relic region (US or EU)"
+  type        = string
+  default     = "US"
+}

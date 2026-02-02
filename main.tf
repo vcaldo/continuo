@@ -37,9 +37,12 @@ resource "linode_instance" "continuo" {
   stackscript_id  = linode_stackscript.continuo_setup.id
 
   stackscript_data = {
-    admin_username = var.admin_username
-    ssh_keys       = join("\n", var.ssh_public_keys)
-    hostname       = "continuo"
+    admin_username        = var.admin_username
+    ssh_keys              = join("\n", var.ssh_public_keys)
+    hostname              = "continuo"
+    new_relic_license_key = var.new_relic_license_key
+    new_relic_account_id  = var.new_relic_account_id
+    new_relic_region      = var.new_relic_region
   }
 }
 
