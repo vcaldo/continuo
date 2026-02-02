@@ -10,9 +10,11 @@ export DEBIAN_FRONTEND=noninteractive
 # <UDF name="new_relic_license_key" label="New Relic License Key" default="" />
 # <UDF name="new_relic_account_id" label="New Relic Account ID" default="" />
 # <UDF name="new_relic_region" label="New Relic Region" default="US" />
+# <UDF name="restore_backup" label="Restore from backup" default="false" />
 
 ADMIN_USER="$ADMIN_USERNAME"
 SERVER_HOSTNAME="$HOSTNAME"
+RESTORE_MODE="${RESTORE_BACKUP:-false}"
 
 # Set hostname
 hostnamectl set-hostname "$SERVER_HOSTNAME"
@@ -118,9 +120,47 @@ su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield
 # }
 # EOF
 
-# Install OpenClaw CLI and daemon
-# pnpm add -g openclaw@latest
-# openclaw onboard --install-daemon
+# ============================================================================
+# OPENCLAW INSTALLATION AND CONFIGURATION
+# ============================================================================
+
+echo "Installing OpenClaw..."
+
+# Install OpenClaw CLI globally using pnpm (pnpm is in user's PATH via .bashrc)
+su - "$ADMIN_USER" -c 'source ~/.bashrc && pnpm add -g openclaw@latest'
+
+# Check for backup restore
+RESTORE_DIR="/home/$ADMIN_USER/.restore"
+if [ "$RESTORE_MODE" = "true" ] && [ -d "$RESTORE_DIR" ] && [ -f "$RESTORE_DIR/manifest.json" ]; then
+    echo "Backup detected - restoring configuration before daemon setup..."
+
+    # Run restore script (provided via file provisioner)
+    if [ -f "/tmp/restore.sh" ]; then
+        chmod +x /tmp/restore.sh
+        ADMIN_USER="$ADMIN_USER" /tmp/restore.sh
+    else
+        echo "WARNING: restore.sh not found, manual restoration needed"
+    fi
+
+    # Install daemon without running onboard wizard (config already exists)
+    echo "Installing OpenClaw gateway..."
+    su - "$ADMIN_USER" -c 'source ~/.bashrc && openclaw gateway install' || true
+    su - "$ADMIN_USER" -c 'source ~/.bashrc && openclaw gateway start' || true
+
+    echo "OpenClaw restored from backup and daemon started"
+else
+    echo "Fresh install - run 'openclaw onboard' to complete setup"
+
+    # For fresh install, just set up the workspace directory
+    # User will run 'openclaw onboard' manually to configure channels
+    su - "$ADMIN_USER" -c 'source ~/.bashrc && mkdir -p ~/.openclaw/workspace'
+
+    echo "OpenClaw installed - run 'openclaw onboard' to complete setup"
+fi
+
+# Verify OpenClaw installation
+echo "Verifying OpenClaw installation..."
+su - "$ADMIN_USER" -c 'source ~/.bashrc && openclaw --version' || echo "WARNING: openclaw command not found"
 
 # Reboot if required
 if [ -f /var/run/reboot-required ]; then

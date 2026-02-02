@@ -19,3 +19,7 @@ override.tf.json
 
 # Claude
 .claude/
+
+# Backups (contain sensitive data)
+backup/
+!backup/.gitkeep
