@@ -1,0 +1,10 @@
+# Linode API token (get from https://cloud.linode.com/profile/tokens)
+linode_token = "your-linode-api-token"
+
+# SSH public keys for admin access
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... user@example.com",
+]
+
+# Admin username (optional, defaults to "admin")
+# admin_username = "admin"
