@@ -14,9 +14,5 @@ ssh_public_keys = [
 # new_relic_account_id  = "your-account-id"
 # new_relic_region      = "US"
 
-# Backup and Restore (optional)
-# Set to true to restore OpenClaw from backup/latest/ during provisioning
-# restore_from_backup = false
-
 # Path to SSH private key (needed for provisioners to upload files)
 # ssh_private_key_path = "~/.ssh/id_ed25519"

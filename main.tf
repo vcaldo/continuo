@@ -62,7 +62,7 @@ resource "linode_instance" "continuo" {
       user        = var.admin_username
       private_key = file(var.ssh_private_key_path)
       host        = tolist(self.ipv4)[0]
-      timeout     = "15m"
+      timeout     = "30m"
     }
   }
 

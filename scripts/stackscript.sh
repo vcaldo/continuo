@@ -124,12 +124,13 @@ su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield
 
 echo "Installing OpenClaw..."
 
-# Install OpenClaw CLI globally using pnpm (use full path since .bashrc has non-interactive guard)
-PNPM_BIN="/home/$ADMIN_USER/.local/share/pnpm/pnpm"
-su - "$ADMIN_USER" -c "$PNPM_BIN add -g openclaw@latest"
+# Install OpenClaw CLI globally using pnpm
+PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
+PNPM_BIN="$PNPM_HOME/pnpm"
+su - "$ADMIN_USER" -c "PNPM_HOME=$PNPM_HOME PATH=$PNPM_HOME:\$PATH $PNPM_BIN add -g openclaw@latest"
 
 # Set up workspace directory and install gateway daemon
-OPENCLAW_BIN="/home/$ADMIN_USER/.local/share/pnpm/openclaw"
+OPENCLAW_BIN="$PNPM_HOME/openclaw"
 su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
 su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install" || true
 su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start" || true
