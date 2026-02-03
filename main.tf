@@ -25,14 +25,14 @@ resource "random_password" "root_password" {
 }
 
 resource "linode_stackscript" "continuo_setup" {
-  label       = "continuo-setup"
-  description = "Setup script for continuo instance"
+  label       = "${var.hostname}-setup"
+  description = "Setup script for ${var.hostname} instance"
   images      = ["linode/ubuntu24.04"]
   script      = file("${path.module}/scripts/stackscript.sh")
 }
 
 resource "linode_instance" "continuo" {
-  label           = "continuo"
+  label           = var.hostname
   region          = "us-ord"
   type            = "g6-standard-2"
   image           = "linode/ubuntu24.04"
@@ -43,7 +43,7 @@ resource "linode_instance" "continuo" {
   stackscript_data = {
     admin_username        = var.admin_username
     ssh_keys              = join("\n", var.ssh_public_keys)
-    hostname              = "continuo"
+    hostname              = var.hostname
     new_relic_license_key = var.new_relic_license_key
     new_relic_account_id  = var.new_relic_account_id
     new_relic_region      = var.new_relic_region
@@ -69,7 +69,7 @@ resource "linode_instance" "continuo" {
 }
 
 resource "linode_firewall" "continuo" {
-  label = "continuo-firewall"
+  label = "${var.hostname}-firewall"
 
   inbound {
     label    = "allow-ssh"

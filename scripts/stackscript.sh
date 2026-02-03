@@ -181,7 +181,11 @@ else
   echo "OpenClaw gateway successfully installed and verified"
 fi
 
-# Reboot if required
+# Mark installation complete BEFORE reboot check
+echo "OpenClaw installed"
+
+# Reboot if required (use nohup to allow script to exit cleanly)
 if [ -f /var/run/reboot-required ]; then
-    reboot
+    echo "Reboot required, scheduling reboot..."
+    nohup sh -c 'sleep 5 && reboot' &>/dev/null &
 fi

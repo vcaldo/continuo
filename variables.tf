@@ -39,3 +39,9 @@ variable "ssh_private_key_path" {
   type        = string
   default     = "~/.ssh/id_ed25519"
 }
+
+variable "hostname" {
+  description = "Hostname for the server instance"
+  type        = string
+  default     = "continuo"
+}
