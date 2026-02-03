@@ -132,14 +132,54 @@ su - "$ADMIN_USER" -c "PNPM_HOME=$PNPM_HOME PATH=$PNPM_HOME:\$PATH $PNPM_BIN add
 # Set up workspace directory and install gateway daemon
 OPENCLAW_BIN="$PNPM_HOME/openclaw"
 su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install" || true
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start" || true
-
-echo "OpenClaw installed and daemon started"
 
 # Verify OpenClaw installation
 echo "Verifying OpenClaw installation..."
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version" || echo "WARNING: openclaw command not found"
+if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version"; then
+  echo "ERROR: openclaw command not found or failed to execute"
+  exit 1
+fi
+
+# Install and start the gateway daemon
+echo "Setting up OpenClaw gateway service..."
+if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install"; then
+  echo "ERROR: Failed to install OpenClaw gateway"
+  exit 1
+fi
+
+# Start the gateway daemon
+if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start"; then
+  echo "ERROR: Failed to start OpenClaw gateway"
+  exit 1
+fi
+
+# Wait briefly for the gateway to start
+echo "Waiting for gateway to become ready..."
+sleep 3
+
+# Verify the gateway is running
+MAX_ATTEMPTS=10
+ATTEMPT=0
+GATEWAY_READY=false
+
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+  if su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
+    GATEWAY_READY=true
+    echo "OpenClaw gateway is running and ready"
+    break
+  fi
+  ATTEMPT=$((ATTEMPT + 1))
+  if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+    echo "Gateway not ready yet, retrying ($ATTEMPT/$MAX_ATTEMPTS)..."
+    sleep 2
+  fi
+done
+
+if [ "$GATEWAY_READY" = false ]; then
+  echo "WARNING: Gateway verification timed out, but installation completed"
+else
+  echo "OpenClaw gateway successfully installed and verified"
+fi
 
 # Reboot if required
 if [ -f /var/run/reboot-required ]; then
