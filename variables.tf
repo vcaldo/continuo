@@ -33,3 +33,9 @@ variable "new_relic_region" {
   type        = string
   default     = "US"
 }
+
+variable "ssh_private_key_path" {
+  description = "Path to SSH private key for provisioner connections"
+  type        = string
+  default     = "~/.ssh/id_ed25519"
+}

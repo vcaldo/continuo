@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.0"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -44,6 +48,24 @@ resource "linode_instance" "continuo" {
     new_relic_account_id  = var.new_relic_account_id
     new_relic_region      = var.new_relic_region
   }
+
+  # Wait for SSH and StackScript to complete
+  provisioner "remote-exec" {
+    inline = [
+      "echo 'Waiting for StackScript to complete...'",
+      "while ! sudo grep -q 'OpenClaw installed' /var/log/stackscript-debug.log 2>/dev/null; do echo 'Still waiting...'; sleep 10; done",
+      "echo 'StackScript completed!'"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.admin_username
+      private_key = file(var.ssh_private_key_path)
+      host        = tolist(self.ipv4)[0]
+      timeout     = "30m"
+    }
+  }
+
 }
 
 resource "linode_firewall" "continuo" {

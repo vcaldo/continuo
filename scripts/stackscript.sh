@@ -118,9 +118,28 @@ su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield
 # }
 # EOF
 
-# Install OpenClaw CLI and daemon
-# pnpm add -g openclaw@latest
-# openclaw onboard --install-daemon
+# ============================================================================
+# OPENCLAW INSTALLATION AND CONFIGURATION
+# ============================================================================
+
+echo "Installing OpenClaw..."
+
+# Install OpenClaw CLI globally using pnpm
+PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
+PNPM_BIN="$PNPM_HOME/pnpm"
+su - "$ADMIN_USER" -c "PNPM_HOME=$PNPM_HOME PATH=$PNPM_HOME:\$PATH $PNPM_BIN add -g openclaw@latest"
+
+# Set up workspace directory and install gateway daemon
+OPENCLAW_BIN="$PNPM_HOME/openclaw"
+su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
+su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install" || true
+su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start" || true
+
+echo "OpenClaw installed and daemon started"
+
+# Verify OpenClaw installation
+echo "Verifying OpenClaw installation..."
+su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version" || echo "WARNING: openclaw command not found"
 
 # Reboot if required
 if [ -f /var/run/reboot-required ]; then

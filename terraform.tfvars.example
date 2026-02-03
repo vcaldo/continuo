@@ -13,3 +13,6 @@ ssh_public_keys = [
 # new_relic_license_key = "your-new-relic-license-key"
 # new_relic_account_id  = "your-account-id"
 # new_relic_region      = "US"
+
+# Path to SSH private key (needed for provisioners to upload files)
+# ssh_private_key_path = "~/.ssh/id_ed25519"
