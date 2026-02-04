@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# ============================================================================
+# SCRIPT INITIALIZATION
+# ============================================================================
+
 exec > >(tee /var/log/stackscript-debug.log | logger -t stackscript -s 2>/dev/console) 2>&1
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -14,38 +19,46 @@ export DEBIAN_FRONTEND=noninteractive
 ADMIN_USER="$ADMIN_USERNAME"
 SERVER_HOSTNAME="$HOSTNAME"
 
-# Set hostname
+# ============================================================================
+# SYSTEM CONFIGURATION
+# ============================================================================
+
+echo "Configuring hostname..."
 hostnamectl set-hostname "$SERVER_HOSTNAME"
-
-# Update /etc/hosts
 echo "127.0.1.1 $SERVER_HOSTNAME" >> /etc/hosts
+echo "Hostname configured successfully"
 
-# Create admin user
+echo "Creating admin user..."
 useradd -m -s /bin/bash "$ADMIN_USER"
+echo "Admin user created successfully"
 
-# Setup SSH directory and authorized_keys
+echo "Configuring SSH..."
 mkdir -p /home/"$ADMIN_USER"/.ssh
 chmod 700 /home/"$ADMIN_USER"/.ssh
-
-# Add SSH keys (newline separated)
 echo "$SSH_KEYS" > /home/"$ADMIN_USER"/.ssh/authorized_keys
 chmod 600 /home/"$ADMIN_USER"/.ssh/authorized_keys
 chown -R "$ADMIN_USER":"$ADMIN_USER" /home/"$ADMIN_USER"/.ssh
-
-# Configure passwordless sudo
 echo "$ADMIN_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$ADMIN_USER"
 chmod 440 /etc/sudoers.d/"$ADMIN_USER"
+echo "SSH configured successfully"
 
-# Harden SSH configuration
+echo "Hardening SSH configuration..."
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 echo "AllowUsers $ADMIN_USER" >> /etc/ssh/sshd_config
 systemctl restart ssh || true
+echo "SSH hardening configured successfully"
 
-# System update and essential packages installation
+# ============================================================================
+# SYSTEM PACKAGES
+# ============================================================================
+
 echo "Updating system packages..."
 apt -qqy update
 apt -qqy full-upgrade
+echo "System packages updated successfully"
+
+echo "Installing essential packages..."
 apt -qqy install \
     apt-transport-https \
     build-essential \
@@ -64,9 +77,16 @@ apt -qqy install \
     ufw \
     vim \
     yq
-dpkg-reconfigure -f noninteractive unattended-upgrades
+echo "Essential packages installed successfully"
 
-# Install New Relic Infrastructure Agent (conditional, no log forwarding)
+echo "Configuring unattended-upgrades..."
+dpkg-reconfigure -f noninteractive unattended-upgrades
+echo "Unattended-upgrades configured successfully"
+
+# ============================================================================
+# MONITORING (OPTIONAL)
+# ============================================================================
+
 if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
   echo "Installing New Relic Infrastructure Agent..."
   curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash && \
@@ -80,41 +100,55 @@ if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
     mv /tmp/newrelic.yml /etc/newrelic-infra.yml
 
   systemctl restart newrelic-infra
+  echo "New Relic Infrastructure Agent installed successfully"
 fi
 
-# Docker installation
+# ============================================================================
+# DOCKER INSTALLATION
+# ============================================================================
+
 echo "Installing Docker..."
 curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
 sh /tmp/get-docker.sh
 systemctl enable docker
 systemctl start docker
 usermod -aG docker "$ADMIN_USER"
+echo "Docker installed successfully"
 
-# Install Python 3 with pip and venv
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
+
+echo "Installing Python..."
 apt-get install -y python3 python3-pip python3-venv
+echo "Python installed successfully"
 
-# Install Node.js and npm via NodeSource
+echo "Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
 apt-get install -y nodejs
+echo "Node.js installed successfully"
 
-# Install pnpm
+echo "Installing PNPM..."
 su - "$ADMIN_USER" -c 'curl -fsSL https://get.pnpm.io/install.sh | sh -'
-
-# Add PNPM_HOME to all users via /etc/profile.d/
 cat > /etc/profile.d/pnpm.sh <<EOF
 export PNPM_HOME="$PNPM_HOME"
 export PATH="\$PNPM_HOME:\$PATH"
 EOF
 chmod +x /etc/profile.d/pnpm.sh
+echo "PNPM installed successfully"
 
-# Install Homebrew (as admin user, not root)
+# ============================================================================
+# HOMEBREW & UTILITIES
+# ============================================================================
+
+echo "Installing Homebrew..."
 su - "$ADMIN_USER" -c 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-
-# Add Homebrew to PATH in .bashrc
 echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/"$ADMIN_USER"/.bashrc
+echo "Homebrew installed successfully"
 
-# Install LazyDocker (using full path to brew)
+echo "Installing LazyDocker..."
 su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield/lazydocker/lazydocker'
+echo "LazyDocker installed successfully"
 
 # ============================================================================
 # OPENCLAW INSTALLATION AND CONFIGURATION
@@ -166,12 +200,13 @@ if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "OpenClaw gateway successfully installed and verified"
+echo "OpenClaw installed successfully"
 
-# Mark installation complete
-echo "OpenClaw installed"
+# ============================================================================
+# FINALIZATION
+# ============================================================================
 
-Reboot if required (use nohup to allow script to exit cleanly)
+# Reboot if required (use nohup to allow script to exit cleanly)
 if [ -f /var/run/reboot-required ]; then
     echo "Reboot required, scheduling reboot..."
     nohup sh -c 'sleep 30 && reboot' &>/dev/null &
