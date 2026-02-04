@@ -77,31 +77,13 @@ apt -qqy install \
     ufw \
     unzip \
     vim \
-    zip \
+    unzip \
     yq
 echo "Essential packages installed successfully"
 
 echo "Configuring unattended-upgrades..."
 dpkg-reconfigure -f noninteractive unattended-upgrades
 echo "Unattended-upgrades configured successfully"
-
-# ============================================================================
-# MONITORING (OPTIONAL)
-# ============================================================================
-
-if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
-  echo "Installing New Relic Infrastructure Agent..."
-  curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash && \
-    NEW_RELIC_API_KEY="${NEW_RELIC_LICENSE_KEY}" \
-    NEW_RELIC_ACCOUNT_ID="${NEW_RELIC_ACCOUNT_ID}" \
-    NEW_RELIC_REGION="${NEW_RELIC_REGION}" \
-    /usr/local/bin/newrelic install -y \
-      -n infrastructure-agent-installer \
-      -n docker-open-source-integration
-
-  systemctl restart newrelic-infra
-  echo "New Relic Infrastructure Agent installed successfully"
-fi
 
 # ============================================================================
 # DOCKER INSTALLATION
@@ -181,15 +163,19 @@ if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version"; then
   exit 1
 fi
 
+# Enable lingering for the admin user to allow systemd user services
+echo "Enabling lingering for user..."
+loginctl enable-linger "$ADMIN_USER"
+
 # Install and start the gateway daemon
 echo "Setting up OpenClaw gateway service..."
-if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install"; then
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway install"; then
   echo "ERROR: Failed to install OpenClaw gateway"
   exit 1
 fi
 
 # Start the gateway daemon
-if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start"; then
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway start"; then
   echo "ERROR: Failed to start OpenClaw gateway"
   exit 1
 fi
@@ -198,7 +184,7 @@ fi
 echo "Waiting for gateway to start..."
 sleep 10
 
-if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
   echo "ERROR: Gateway failed to start"
   exit 1
 fi
@@ -206,11 +192,28 @@ fi
 echo "OpenClaw installed successfully"
 
 # ============================================================================
+# MONITORING (OPTIONAL)
+# ============================================================================
+
+if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
+  echo "Installing New Relic Infrastructure Agent..."
+  curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash && \
+    NEW_RELIC_API_KEY="${NEW_RELIC_LICENSE_KEY}" \
+    NEW_RELIC_ACCOUNT_ID="${NEW_RELIC_ACCOUNT_ID}" \
+    NEW_RELIC_REGION="${NEW_RELIC_REGION}" \
+    /usr/local/bin/newrelic install -y \
+      -n infrastructure-agent-installer
+
+  systemctl restart newrelic-infra
+  echo "New Relic Infrastructure Agent installed successfully"
+fi
+
+# ============================================================================
 # FINALIZATION
 # ============================================================================
 
-# Reboot if required (use nohup to allow script to exit cleanly)
+# Reboot if required (use systemctl with delay to allow script to exit cleanly)
 if [ -f /var/run/reboot-required ]; then
-    echo "Reboot required, scheduling reboot..."
-    nohup sh -c 'sleep 30 && reboot' &>/dev/null &
+    echo "Reboot required, scheduling reboot in 10 seconds..."
+    systemctl reboot --no-block
 fi
