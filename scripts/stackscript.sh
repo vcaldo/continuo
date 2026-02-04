@@ -130,6 +130,9 @@ echo "Node.js installed successfully"
 
 echo "Installing PNPM..."
 su - "$ADMIN_USER" -c 'curl -fsSL https://get.pnpm.io/install.sh | sh -'
+
+# Set PNPM_HOME for all users
+PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
 cat > /etc/profile.d/pnpm.sh <<EOF
 export PNPM_HOME="$PNPM_HOME"
 export PATH="\$PNPM_HOME:\$PATH"
