@@ -185,7 +185,7 @@ fi
 echo "OpenClaw installed"
 
 # Reboot if required (use nohup to allow script to exit cleanly)
-if [ -f /var/run/reboot-required ]; then
-    echo "Reboot required, scheduling reboot..."
-    nohup sh -c 'sleep 5 && reboot' &>/dev/null &
-fi
+# if [ -f /var/run/reboot-required ]; then
+#     echo "Reboot required, scheduling reboot..."
+#     nohup sh -c 'sleep 30 && reboot' &>/dev/null &
+# fi
