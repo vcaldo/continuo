@@ -45,3 +45,22 @@ variable "hostname" {
   type        = string
   default     = "continuo"
 }
+
+variable "telegram_bot_token" {
+  description = "Telegram bot token for OpenClaw"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "region" {
+  description = "Linode region for the instance"
+  type        = string
+  default     = "us-ord"
+}
+
+variable "instance_type" {
+  description = "Linode instance type (size)"
+  type        = string
+  default     = "g6-standard-2"
+}
