@@ -95,11 +95,9 @@ if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
     NEW_RELIC_API_KEY="${NEW_RELIC_LICENSE_KEY}" \
     NEW_RELIC_ACCOUNT_ID="${NEW_RELIC_ACCOUNT_ID}" \
     NEW_RELIC_REGION="${NEW_RELIC_REGION}" \
-    /usr/local/bin/newrelic install -y
-
-  # Disable log forwarding (correct nested structure: log.forward)
-  yq -y '.log.forward = false' /etc/newrelic-infra.yml > /tmp/newrelic.yml && \
-    mv /tmp/newrelic.yml /etc/newrelic-infra.yml
+    /usr/local/bin/newrelic install -y \
+      -n infrastructure-agent-installer \
+      -n docker-open-source-integration
 
   systemctl restart newrelic-infra
   echo "New Relic Infrastructure Agent installed successfully"
