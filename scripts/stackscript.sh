@@ -75,7 +75,9 @@ apt -qqy install \
     software-properties-common \
     unattended-upgrades \
     ufw \
+    unzip \
     vim \
+    zip \
     yq
 echo "Essential packages installed successfully"
 

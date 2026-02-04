@@ -32,9 +32,12 @@ backup:
 	scp scripts/backup.sh $$USER@$$IP:/tmp/backup.sh && \
 	ssh $$USER@$$IP "chmod +x /tmp/backup.sh && /tmp/backup.sh" && \
 	echo "Downloading backup archive..." && \
-	scp $$USER@$$IP:/tmp/openclaw-backup.tar.gz backup/latest/ && \
-	cd backup/latest && tar -xzf openclaw-backup.tar.gz && rm openclaw-backup.tar.gz && \
-	echo "Backup completed: backup/latest/"
+	TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
+	scp $$USER@$$IP:/tmp/openclaw-backup.zip backup/archives/$$TIMESTAMP.zip && \
+	echo "Archive saved: backup/archives/$$TIMESTAMP.zip" && \
+	rm -rf backup/latest/* && \
+	unzip -q backup/archives/$$TIMESTAMP.zip -d backup/latest/
+	@echo "Backup completed: backup/latest/"
 
 # Create encrypted timestamped archive
 backup-encrypt:
