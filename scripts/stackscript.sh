@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# ============================================================================
+# SCRIPT INITIALIZATION
+# ============================================================================
+
 exec > >(tee /var/log/stackscript-debug.log | logger -t stackscript -s 2>/dev/console) 2>&1
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -14,38 +19,46 @@ export DEBIAN_FRONTEND=noninteractive
 ADMIN_USER="$ADMIN_USERNAME"
 SERVER_HOSTNAME="$HOSTNAME"
 
-# Set hostname
+# ============================================================================
+# SYSTEM CONFIGURATION
+# ============================================================================
+
+echo "Configuring hostname..."
 hostnamectl set-hostname "$SERVER_HOSTNAME"
-
-# Update /etc/hosts
 echo "127.0.1.1 $SERVER_HOSTNAME" >> /etc/hosts
+echo "Hostname configured successfully"
 
-# Create admin user
+echo "Creating admin user..."
 useradd -m -s /bin/bash "$ADMIN_USER"
+echo "Admin user created successfully"
 
-# Setup SSH directory and authorized_keys
+echo "Configuring SSH..."
 mkdir -p /home/"$ADMIN_USER"/.ssh
 chmod 700 /home/"$ADMIN_USER"/.ssh
-
-# Add SSH keys (newline separated)
 echo "$SSH_KEYS" > /home/"$ADMIN_USER"/.ssh/authorized_keys
 chmod 600 /home/"$ADMIN_USER"/.ssh/authorized_keys
 chown -R "$ADMIN_USER":"$ADMIN_USER" /home/"$ADMIN_USER"/.ssh
-
-# Configure passwordless sudo
 echo "$ADMIN_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"$ADMIN_USER"
 chmod 440 /etc/sudoers.d/"$ADMIN_USER"
+echo "SSH configured successfully"
 
-# Harden SSH configuration
+echo "Hardening SSH configuration..."
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 echo "AllowUsers $ADMIN_USER" >> /etc/ssh/sshd_config
 systemctl restart ssh || true
+echo "SSH hardening configured successfully"
 
-# System update and essential packages installation
+# ============================================================================
+# SYSTEM PACKAGES
+# ============================================================================
+
 echo "Updating system packages..."
 apt -qqy update
 apt -qqy full-upgrade
+echo "System packages updated successfully"
+
+echo "Installing essential packages..."
 apt -qqy install \
     apt-transport-https \
     build-essential \
@@ -62,61 +75,65 @@ apt -qqy install \
     software-properties-common \
     unattended-upgrades \
     ufw \
+    unzip \
     vim \
+    unzip \
     yq
+echo "Essential packages installed successfully"
+
+echo "Configuring unattended-upgrades..."
 dpkg-reconfigure -f noninteractive unattended-upgrades
+echo "Unattended-upgrades configured successfully"
 
-# Install New Relic Infrastructure Agent (conditional, no log forwarding)
-if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
-  echo "Installing New Relic Infrastructure Agent..."
-  curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash && \
-    NEW_RELIC_API_KEY="${NEW_RELIC_LICENSE_KEY}" \
-    NEW_RELIC_ACCOUNT_ID="${NEW_RELIC_ACCOUNT_ID}" \
-    NEW_RELIC_REGION="${NEW_RELIC_REGION}" \
-    /usr/local/bin/newrelic install -y
+# ============================================================================
+# DOCKER INSTALLATION
+# ============================================================================
 
-  # Disable log forwarding (correct nested structure: log.forward)
-  yq -y '.log.forward = false' /etc/newrelic-infra.yml > /tmp/newrelic.yml && \
-    mv /tmp/newrelic.yml /etc/newrelic-infra.yml
-
-  systemctl restart newrelic-infra
-fi
-
-# Docker installation
 echo "Installing Docker..."
 curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
 sh /tmp/get-docker.sh
 systemctl enable docker
 systemctl start docker
-usermod -aG docker "$ADMIN_USER" || true
+usermod -aG docker "$ADMIN_USER"
+echo "Docker installed successfully"
 
-# Install Python 3 with pip and venv
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
+
+echo "Installing Python..."
 apt-get install -y python3 python3-pip python3-venv
+echo "Python installed successfully"
 
-# Install Node.js and npm via NodeSource
+echo "Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
 apt-get install -y nodejs
+echo "Node.js installed successfully"
 
-# Install pnpm
+echo "Installing PNPM..."
 su - "$ADMIN_USER" -c 'curl -fsSL https://get.pnpm.io/install.sh | sh -'
 
-# Install Homebrew (as admin user, not root)
+# Set PNPM_HOME for all users
+PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
+cat > /etc/profile.d/pnpm.sh <<EOF
+export PNPM_HOME="$PNPM_HOME"
+export PATH="\$PNPM_HOME:\$PATH"
+EOF
+chmod +x /etc/profile.d/pnpm.sh
+echo "PNPM installed successfully"
+
+# ============================================================================
+# HOMEBREW & UTILITIES
+# ============================================================================
+
+echo "Installing Homebrew..."
 su - "$ADMIN_USER" -c 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-
-# Add Homebrew to PATH in .bashrc
 echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/"$ADMIN_USER"/.bashrc
+echo "Homebrew installed successfully"
 
-# Install LazyDocker (using full path to brew)
+echo "Installing LazyDocker..."
 su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield/lazydocker/lazydocker'
-
-# # Add brew function for root to run as admin user
-# cat >> /root/.bashrc <<EOF
-
-# # Run brew as admin user (brew refuses to run as root)
-# brew() {
-#   su - $ADMIN_USER -c "/home/linuxbrew/.linuxbrew/bin/brew \$*"
-# }
-# EOF
+echo "LazyDocker installed successfully"
 
 # ============================================================================
 # OPENCLAW INSTALLATION AND CONFIGURATION
@@ -127,21 +144,76 @@ echo "Installing OpenClaw..."
 # Install OpenClaw CLI globally using pnpm
 PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
 PNPM_BIN="$PNPM_HOME/pnpm"
+
 su - "$ADMIN_USER" -c "PNPM_HOME=$PNPM_HOME PATH=$PNPM_HOME:\$PATH $PNPM_BIN add -g openclaw@latest"
 
-# Set up workspace directory and install gateway daemon
+# Set up workspace directory and OpenClaw config
 OPENCLAW_BIN="$PNPM_HOME/openclaw"
 su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway install" || true
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start" || true
 
-echo "OpenClaw installed and daemon started"
+# Create OpenClaw config with local gateway mode and generated token
+GATEWAY_TOKEN=$(openssl rand -hex 32)
+jq -n --arg token "$GATEWAY_TOKEN" '{gateway: {mode: "local", auth: {token: $token}}}' > /home/$ADMIN_USER/.openclaw/openclaw.json
+chown $ADMIN_USER:$ADMIN_USER /home/$ADMIN_USER/.openclaw/openclaw.json
 
 # Verify OpenClaw installation
 echo "Verifying OpenClaw installation..."
-su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version" || echo "WARNING: openclaw command not found"
+if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN --version"; then
+  echo "ERROR: openclaw command not found or failed to execute"
+  exit 1
+fi
 
-# Reboot if required
+# Enable lingering for the admin user to allow systemd user services
+echo "Enabling lingering for user..."
+loginctl enable-linger "$ADMIN_USER"
+
+# Install and start the gateway daemon
+echo "Setting up OpenClaw gateway service..."
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway install"; then
+  echo "ERROR: Failed to install OpenClaw gateway"
+  exit 1
+fi
+
+# Start the gateway daemon
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway start"; then
+  echo "ERROR: Failed to start OpenClaw gateway"
+  exit 1
+fi
+
+# Wait for gateway to start and verify
+echo "Waiting for gateway to start..."
+sleep 10
+
+if ! su - "$ADMIN_USER" -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) $OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
+  echo "ERROR: Gateway failed to start"
+  exit 1
+fi
+
+echo "OpenClaw installed successfully"
+
+# ============================================================================
+# MONITORING (OPTIONAL)
+# ============================================================================
+
+if [ -n "${NEW_RELIC_LICENSE_KEY}" ]; then
+  echo "Installing New Relic Infrastructure Agent..."
+  curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash && \
+    NEW_RELIC_API_KEY="${NEW_RELIC_LICENSE_KEY}" \
+    NEW_RELIC_ACCOUNT_ID="${NEW_RELIC_ACCOUNT_ID}" \
+    NEW_RELIC_REGION="${NEW_RELIC_REGION}" \
+    /usr/local/bin/newrelic install -y \
+      -n infrastructure-agent-installer
+
+  systemctl restart newrelic-infra
+  echo "New Relic Infrastructure Agent installed successfully"
+fi
+
+# ============================================================================
+# FINALIZATION
+# ============================================================================
+
+# Reboot if required (use systemctl with delay to allow script to exit cleanly)
 if [ -f /var/run/reboot-required ]; then
-    reboot
+    echo "Reboot required, scheduling reboot in 10 seconds..."
+    systemctl reboot --no-block
 fi

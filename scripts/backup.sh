@@ -3,7 +3,7 @@
 set -euo pipefail
 
 BACKUP_DIR="/tmp/openclaw-backup"
-ARCHIVE="/tmp/openclaw-backup.tar.gz"
+ARCHIVE="/tmp/openclaw-backup.zip"
 ADMIN_USER="${ADMIN_USER:-admin}"
 HOME_DIR="/home/$ADMIN_USER"
 
@@ -109,7 +109,7 @@ echo "  - Manifest created"
 # ============================================================================
 echo "Creating archive..."
 cd "$BACKUP_DIR"
-tar -czf "$ARCHIVE" .
+zip -rq "$ARCHIVE" .
 
 echo ""
 echo "=== Backup Complete ==="

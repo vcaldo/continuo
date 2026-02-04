@@ -9,6 +9,9 @@ ssh_public_keys = [
 # Admin username (optional, defaults to "admin")
 # admin_username = "admin"
 
+# Hostname for the server (optional, defaults to "continuo")
+# hostname = "continuo"
+
 # New Relic Infrastructure Monitoring (optional)
 # new_relic_license_key = "your-new-relic-license-key"
 # new_relic_account_id  = "your-account-id"
