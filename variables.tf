@@ -52,3 +52,15 @@ variable "telegram_bot_token" {
   sensitive   = true
   default     = ""
 }
+
+variable "region" {
+  description = "Linode region for the instance"
+  type        = string
+  default     = "us-ord"
+}
+
+variable "instance_type" {
+  description = "Linode instance type (size)"
+  type        = string
+  default     = "g6-standard-2"
+}

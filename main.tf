@@ -33,8 +33,8 @@ resource "linode_stackscript" "continuo_setup" {
 
 resource "linode_instance" "continuo" {
   label           = var.hostname
-  region          = "us-ord"
-  type            = "g6-standard-2"
+  region          = var.region
+  type            = var.instance_type
   image           = "linode/ubuntu24.04"
   root_pass       = random_password.root_password.result
   authorized_keys = var.ssh_public_keys
