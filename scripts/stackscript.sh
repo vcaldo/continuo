@@ -88,7 +88,7 @@ curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
 sh /tmp/get-docker.sh
 systemctl enable docker
 systemctl start docker
-usermod -aG docker "$ADMIN_USER" || true
+usermod -aG docker "$ADMIN_USER"
 
 # Install Python 3 with pip and venv
 apt-get install -y python3 python3-pip python3-venv
@@ -100,6 +100,13 @@ apt-get install -y nodejs
 # Install pnpm
 su - "$ADMIN_USER" -c 'curl -fsSL https://get.pnpm.io/install.sh | sh -'
 
+# Add PNPM_HOME to all users via /etc/profile.d/
+cat > /etc/profile.d/pnpm.sh <<EOF
+export PNPM_HOME="$PNPM_HOME"
+export PATH="\$PNPM_HOME:\$PATH"
+EOF
+chmod +x /etc/profile.d/pnpm.sh
+
 # Install Homebrew (as admin user, not root)
 su - "$ADMIN_USER" -c 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
 
@@ -108,15 +115,6 @@ echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/"$ADMIN_U
 
 # Install LazyDocker (using full path to brew)
 su - "$ADMIN_USER" -c '/home/linuxbrew/.linuxbrew/bin/brew install jesseduffield/lazydocker/lazydocker'
-
-# # Add brew function for root to run as admin user
-# cat >> /root/.bashrc <<EOF
-
-# # Run brew as admin user (brew refuses to run as root)
-# brew() {
-#   su - $ADMIN_USER -c "/home/linuxbrew/.linuxbrew/bin/brew \$*"
-# }
-# EOF
 
 # ============================================================================
 # OPENCLAW INSTALLATION AND CONFIGURATION
@@ -127,11 +125,17 @@ echo "Installing OpenClaw..."
 # Install OpenClaw CLI globally using pnpm
 PNPM_HOME="/home/$ADMIN_USER/.local/share/pnpm"
 PNPM_BIN="$PNPM_HOME/pnpm"
+
 su - "$ADMIN_USER" -c "PNPM_HOME=$PNPM_HOME PATH=$PNPM_HOME:\$PATH $PNPM_BIN add -g openclaw@latest"
 
-# Set up workspace directory and install gateway daemon
+# Set up workspace directory and OpenClaw config
 OPENCLAW_BIN="$PNPM_HOME/openclaw"
 su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
+
+# Create OpenClaw config with local gateway mode and generated token
+GATEWAY_TOKEN=$(openssl rand -hex 32)
+jq -n --arg token "$GATEWAY_TOKEN" '{gateway: {mode: "local", auth: {token: $token}}}' > /home/$ADMIN_USER/.openclaw/openclaw.json
+chown $ADMIN_USER:$ADMIN_USER /home/$ADMIN_USER/.openclaw/openclaw.json
 
 # Verify OpenClaw installation
 echo "Verifying OpenClaw installation..."
@@ -153,39 +157,22 @@ if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway start"; then
   exit 1
 fi
 
-# Wait briefly for the gateway to start
-echo "Waiting for gateway to become ready..."
-sleep 3
+# Wait for gateway to start and verify
+echo "Waiting for gateway to start..."
+sleep 10
 
-# Verify the gateway is running
-MAX_ATTEMPTS=10
-ATTEMPT=0
-GATEWAY_READY=false
-
-while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-  if su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
-    GATEWAY_READY=true
-    echo "OpenClaw gateway is running and ready"
-    break
-  fi
-  ATTEMPT=$((ATTEMPT + 1))
-  if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-    echo "Gateway not ready yet, retrying ($ATTEMPT/$MAX_ATTEMPTS)..."
-    sleep 2
-  fi
-done
-
-if [ "$GATEWAY_READY" = false ]; then
-  echo "WARNING: Gateway verification timed out, but installation completed"
-else
-  echo "OpenClaw gateway successfully installed and verified"
+if ! su - "$ADMIN_USER" -c "$OPENCLAW_BIN gateway status" >/dev/null 2>&1; then
+  echo "ERROR: Gateway failed to start"
+  exit 1
 fi
 
-# Mark installation complete BEFORE reboot check
+echo "OpenClaw gateway successfully installed and verified"
+
+# Mark installation complete
 echo "OpenClaw installed"
 
-# Reboot if required (use nohup to allow script to exit cleanly)
-# if [ -f /var/run/reboot-required ]; then
-#     echo "Reboot required, scheduling reboot..."
-#     nohup sh -c 'sleep 30 && reboot' &>/dev/null &
-# fi
+Reboot if required (use nohup to allow script to exit cleanly)
+if [ -f /var/run/reboot-required ]; then
+    echo "Reboot required, scheduling reboot..."
+    nohup sh -c 'sleep 30 && reboot' &>/dev/null &
+fi
