@@ -47,6 +47,7 @@ resource "linode_instance" "continuo" {
     new_relic_license_key = var.new_relic_license_key
     new_relic_account_id  = var.new_relic_account_id
     new_relic_region      = var.new_relic_region
+    telegram_bot_token    = var.telegram_bot_token
   }
 
   # Wait for SSH and StackScript to complete

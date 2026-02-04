@@ -45,3 +45,10 @@ variable "hostname" {
   type        = string
   default     = "continuo"
 }
+
+variable "telegram_bot_token" {
+  description = "Telegram bot token for OpenClaw"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

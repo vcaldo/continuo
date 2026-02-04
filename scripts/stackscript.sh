@@ -15,6 +15,7 @@ export DEBIAN_FRONTEND=noninteractive
 # <UDF name="new_relic_license_key" label="New Relic License Key" default="" />
 # <UDF name="new_relic_account_id" label="New Relic Account ID" default="" />
 # <UDF name="new_relic_region" label="New Relic Region" default="US" />
+# <UDF name="telegram_bot_token" label="Telegram Bot Token" default="" />
 
 ADMIN_USER="$ADMIN_USERNAME"
 SERVER_HOSTNAME="$HOSTNAME"
@@ -154,6 +155,13 @@ su - "$ADMIN_USER" -c "mkdir -p ~/.openclaw/workspace"
 # Create OpenClaw config with local gateway mode and generated token
 GATEWAY_TOKEN=$(openssl rand -hex 32)
 jq -n --arg token "$GATEWAY_TOKEN" '{gateway: {mode: "local", auth: {token: $token}}}' > /home/$ADMIN_USER/.openclaw/openclaw.json
+
+# Add Telegram channel if token is provided
+if [ -n "${TELEGRAM_BOT_TOKEN}" ]; then
+  jq --arg tg_token "$TELEGRAM_BOT_TOKEN" '.channels.telegram = {enabled: true, botToken: $tg_token, dmPolicy: "pairing"}' \
+    /home/$ADMIN_USER/.openclaw/openclaw.json > /tmp/openclaw.json && mv /tmp/openclaw.json /home/$ADMIN_USER/.openclaw/openclaw.json
+fi
+
 chown $ADMIN_USER:$ADMIN_USER /home/$ADMIN_USER/.openclaw/openclaw.json
 
 # Verify OpenClaw installation
