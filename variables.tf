@@ -46,13 +46,6 @@ variable "hostname" {
   default     = "continuo"
 }
 
-variable "telegram_bot_token" {
-  description = "Telegram bot token for OpenClaw"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "region" {
   description = "Linode region for the instance"
   type        = string
