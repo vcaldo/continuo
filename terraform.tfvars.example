@@ -20,9 +20,6 @@ ssh_public_keys = [
 # Path to SSH private key (needed for provisioners to upload files)
 # ssh_private_key_path = "~/.ssh/id_ed25519"
 
-# Telegram bot token (get from @BotFather)
-# telegram_bot_token = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
-
 # Linode instance configuration (optional)
 # region = "us-ord"           # Chicago region (default)
 # instance_type = "g6-standard-2"  # 2GB instance (default)
