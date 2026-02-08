@@ -2,6 +2,7 @@
 # StackScript for Docker host setup
 # <UDF name="admin_username" label="Admin Username" default="admin" />
 # <UDF name="ssh_public_keys" label="SSH Public Keys (newline-separated)" />
+# <UDF name="hostname" label="Hostname for the server" default="continuo" />
 # <UDF name="new_relic_license_key" label="New Relic License Key" default="" />
 # <UDF name="new_relic_account_id" label="New Relic Account ID" default="" />
 # <UDF name="new_relic_region" label="New Relic Region" default="US" />
@@ -12,6 +13,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "=== Docker Host Setup Started ==="
 echo "Timestamp: $(date -Iseconds)"
+
+# Configure hostname
+hostnamectl set-hostname "$HOSTNAME"
+echo "127.0.1.1 $HOSTNAME" >> /etc/hosts
 
 # Update system
 apt-get update && apt-get upgrade -y
@@ -82,7 +87,7 @@ apt-get install -y unattended-upgrades
 dpkg-reconfigure -plow unattended-upgrades
 
 # Install useful tools
-apt-get install -y ca-certificates curl fail2ban git htop iotop jq ncdu tmux
+apt-get install -y ca-certificates curl fail2ban git htop iotop jq ncdu tmux zip
 
 echo "=== Docker Host Setup Complete ==="
 echo "Docker version: $(docker --version)"
