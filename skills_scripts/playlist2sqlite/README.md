@@ -1,6 +1,6 @@
 # Playlist2SQLite Skill
 
-OpenClaw skill for parsing M3U/M3U8 playlists into portable SQL dump files.
+OpenClaw skill for parsing M3U/M3U8 playlists into portable SQL dump files and **intelligently searching for channels by program/event**.
 
 **Optimized for very large playlists (100k+ entries)** with reliable downloads, retry logic, and progress indicators.
 
@@ -10,7 +10,8 @@ OpenClaw skill for parsing M3U/M3U8 playlists into portable SQL dump files.
 playlist2sqlite/
 ├── SKILL.md                      # Skill definition (loaded by OpenClaw)
 ├── scripts/
-│   └── playlist2sqlite.sh        # Main parsing script
+│   ├── playlist2sqlite.sh        # Main parsing script
+│   └── search-channel.sh         # Intelligent channel search
 └── README.md                     # This file (repo documentation)
 ```
 
@@ -47,6 +48,11 @@ Or manually copy to `~/.openclaw/skills/playlist2sqlite/`
 
 # Import into SQLite
 sqlite3 channels.db < channels.sql
+
+# 🔍 Search for channels by program/event
+./scripts/search-channel.sh --db channels.db --query "jogo do Barça"
+./scripts/search-channel.sh --db channels.db --query "Champions League" --country BR
+./scripts/search-channel.sh --db channels.db --query "NBA Finals" --json
 ```
 
 ## Features
@@ -57,6 +63,7 @@ sqlite3 channels.db < channels.sql
 - **SQL safety**: Proper escaping for all values
 - **Transaction wrapping**: Fast database imports
 - **Error handling**: Graceful cleanup on errors, informative messages
+- **🔍 Intelligent search**: Find channels by program/event with web search + fuzzy matching
 
 ## Testing
 
@@ -107,6 +114,35 @@ sqlite3 large-test.db "SELECT group_title, COUNT(*) FROM channels GROUP BY group
 rm -f large-test.m3u large-test.sql large-test.db
 ```
 
+### Testing Channel Search
+
+```bash
+# Create test database with sample sports channels
+sqlite3 test_channels.db << 'EOF'
+CREATE TABLE IF NOT EXISTS channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tvg_id TEXT, tvg_name TEXT, tvg_logo TEXT,
+    group_title TEXT, url TEXT NOT NULL, raw_extinf TEXT
+);
+INSERT INTO channels (tvg_name, group_title, url) VALUES
+    ('ESPN Brasil HD', 'Sports', 'http://stream.example.com/espn-br'),
+    ('ESPN 2 HD', 'Sports', 'http://stream.example.com/espn2'),
+    ('TNT Sports', 'Sports', 'http://stream.example.com/tnt'),
+    ('SporTV HD', 'Sports BR', 'http://stream.example.com/sportv'),
+    ('Premiere FC', 'Sports BR', 'http://stream.example.com/premiere'),
+    ('GloboNews', 'News BR', 'http://stream.example.com/globonews'),
+    ('HBO HD', 'Movies', 'http://stream.example.com/hbo');
+EOF
+
+# Test searches
+./scripts/search-channel.sh --db test_channels.db --query "jogo do Barça"
+./scripts/search-channel.sh --db test_channels.db --query "Champions League" --verbose
+./scripts/search-channel.sh --db test_channels.db --query "notícias" --json
+
+# Cleanup
+rm -f test_channels.db
+```
+
 ## Output
 
 The script produces a `.sql` file (SQL dump) that can be imported into any SQLite database:
@@ -121,6 +157,8 @@ sqlite3 my-iptv.db < my-iptv.sql
 
 ## Options Reference
 
+### playlist2sqlite.sh
+
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--name NAME` | Output file name (required) | - |
@@ -131,6 +169,19 @@ sqlite3 my-iptv.db < my-iptv.sql
 | `--progress` | Show download/parse progress | auto for large files |
 | `--timeout SECS` | Max download time | 1800 (30 min) |
 | `--retries N` | Download retry count | 3 |
+
+### search-channel.sh
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--db FILE` | SQLite database file (required) | - |
+| `--query TEXT` | Event/program to search (required) | - |
+| `--country CODE` | Country filter (BR, US, ES, etc.) | - |
+| `--lang LANG` | Search language (pt, es, en) | pt |
+| `--max N` | Maximum results | 10 |
+| `--json` | Output as JSON | false |
+| `--verbose` | Show detailed progress | false |
+| `--no-cache` | Skip web search cache | false |
 
 ## Troubleshooting
 

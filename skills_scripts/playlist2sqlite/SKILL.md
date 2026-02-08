@@ -244,6 +244,137 @@ The script is optimized for very large playlists:
 4. **Channel Migration**: Extract channels from old format, transform, export to new format
 5. **EPG Integration**: Use tvg-id to link channels with Electronic Program Guide data
 6. **Backup**: Store playlist data in portable SQL format
+7. **Intelligent Search**: Find channels broadcasting specific programs/events
+
+---
+
+## Channel Search
+
+Find channels broadcasting specific programs or events by searching the web for broadcasting information and matching against your local channel database.
+
+### Quick Start
+
+```bash
+# Find channels showing Barcelona match
+./scripts/search-channel.sh --db channels.db --query "jogo do Barça"
+
+# Search for Champions League in Brazil
+./scripts/search-channel.sh --db channels.db --query "Champions League" --country BR
+
+# JSON output for integration
+./scripts/search-channel.sh --db channels.db --query "NBA Finals" --json
+```
+
+### How It Works
+
+1. **Web Search**: Searches DuckDuckGo for "{query} onde assistir canais transmissão"
+2. **Channel Extraction**: Extracts channel names from search results (ESPN, TNT, Globo, etc.)
+3. **Fuzzy Matching**: Matches found channels against your SQLite database
+4. **Ranking**: Scores results by match quality, sports relevance, and channel popularity
+5. **Output**: Returns top matches with channel name, category, and stream URL
+
+### Script Usage
+
+Located at: `scripts/search-channel.sh`
+
+```
+--db FILE          SQLite database file (required)
+--query "TEXT"     Event/program to search for (required)
+--country CODE     Country filter: BR, US, ES, PT, etc.
+--lang LANG        Search language: pt, es, en (default: pt)
+--max N            Maximum results to show (default: 10)
+--json             Output results as JSON
+--verbose          Show detailed progress
+--no-cache         Skip cache for web search
+--help             Display help
+```
+
+### Examples
+
+**Sports Event (Portuguese):**
+```bash
+./scripts/search-channel.sh --db channels.db --query "jogo do Flamengo"
+
+# Output:
+# Found 5 possible channels for "jogo do Flamengo":
+#
+# 1. [⭐⭐⭐] SporTV HD
+#    Category: Sports BR
+#    URL: http://stream.url/sportv
+#
+# 2. [⭐⭐⭐] Premiere FC
+#    Category: Sports BR
+#    URL: http://stream.url/premiere
+```
+
+**Soccer Match (Spanish):**
+```bash
+./scripts/search-channel.sh --db channels.db --query "Real Madrid vs Barcelona" --lang es
+
+# Searches for: "Real Madrid vs Barcelona donde ver canal transmisión en vivo"
+```
+
+**Movies:**
+```bash
+./scripts/search-channel.sh --db channels.db --query "filme Gladiador" --lang pt
+```
+
+**JSON Output (for integration):**
+```bash
+./scripts/search-channel.sh --db channels.db --query "UFC 300" --json
+
+# Output:
+# {
+#   "query": "UFC 300",
+#   "count": 3,
+#   "results": [
+#     {"name": "ESPN Brasil HD", "category": "Sports", "url": "...", "score": 180},
+#     {"name": "Combate", "category": "Sports", "url": "...", "score": 150}
+#   ]
+# }
+```
+
+### Scoring Logic
+
+Channels are ranked by score based on:
+
+| Factor | Points |
+|--------|--------|
+| Exact name match | +100 |
+| Name contains search term | +80 |
+| Partial word match | +30 per word |
+| Group matches event type (sports→sports) | +40 |
+| Known popular channel | +20-50 |
+| HD/FHD/4K quality | +10 |
+
+**Event Type Detection:**
+- Sports keywords → prioritize sports channels
+- Movie keywords → prioritize entertainment channels  
+- News keywords → prioritize news channels
+
+### Caching
+
+Web search results are cached for 1 hour in `/tmp/playlist2sqlite-cache/` to reduce API calls. Use `--no-cache` to force fresh search.
+
+### Supported Languages
+
+| Language | Search Terms |
+|----------|-------------|
+| Portuguese (pt) | "onde assistir canal transmissão ao vivo" |
+| Spanish (es) | "donde ver canal transmisión en vivo" |
+| English (en) | "where to watch channel broadcast live stream" |
+
+### Known Channel Patterns
+
+The script recognizes popular broadcasting channels:
+
+**Sports:** ESPN, Fox Sports, TNT Sports, SporTV, Premiere, BandSports, beIN Sports, Sky Sports, DAZN, Movistar, Star+
+
+**Entertainment:** HBO, HBO Max, Netflix, Prime Video, Disney+, Paramount+
+
+**News:** GloboNews, CNN, CNN Brasil, BBC
+
+---
 
 ## Notes
 
