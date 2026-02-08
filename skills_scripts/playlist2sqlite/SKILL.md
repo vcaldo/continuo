@@ -1,32 +1,47 @@
 ---
 name: playlist2sqlite
-description: Extract content from M3U playlist files and store in SQLite database. Use when working with M3U/M3U8 playlists (IPTV, streaming URLs, media collections) and needing to parse, query, or analyze playlist metadata (channels, URLs, logos, groups, etc.) in a structured database format.
+description: Extract content from M3U playlist files and store in portable SQL format. Use when working with M3U/M3U8 playlists (IPTV, streaming URLs, media collections) and needing to parse, query, or analyze playlist metadata (channels, URLs, logos, groups, etc.). Supports both local files and URLs.
 ---
 
 # Playlist2SQLite
 
-Extract and parse M3U/M3U8 playlist files into a SQLite database for querying and analysis.
+Extract and parse M3U/M3U8 playlist files into portable SQL dump files for querying and analysis.
 
 ## Overview
 
-M3U playlists (commonly used for IPTV, streaming services, and media collections) contain channel/stream metadata in a semi-structured text format. This skill provides a bash script to parse M3U files and store entries in a SQLite database with structured fields.
+M3U playlists (commonly used for IPTV, streaming services, and media collections) contain channel/stream metadata in a semi-structured text format. This skill provides a bash script to parse M3U files (from local files or URLs) and export as SQL dump files that can be imported into any SQLite database.
 
 ## Quick Start
 
 ```bash
-# Parse an M3U file and create/populate database
-scripts/playlist2sqlite.sh --input playlist.m3u --db channels.db
+# Parse from URL
+scripts/playlist2sqlite.sh --url "https://provider.com/iptv.m3u" --name my-iptv
 
-# Append to existing database
-scripts/playlist2sqlite.sh --input new-channels.m3u --db channels.db --append
+# Parse from local file
+scripts/playlist2sqlite.sh --input playlist.m3u --name channels
+
+# Append to existing SQL file
+scripts/playlist2sqlite.sh --input new-channels.m3u --name channels --append
 
 # Verbose mode
-scripts/playlist2sqlite.sh --input playlist.m3u --db channels.db --verbose
+scripts/playlist2sqlite.sh --url "https://example.com/list.m3u" --name streams --verbose
+
+# Import into SQLite database
+sqlite3 channels.db < channels.sql
 ```
+
+## Output Format
+
+The script outputs a `.sql` file (SQL dump) containing:
+- Table creation statements
+- Index creation statements
+- INSERT statements for each channel
+
+This portable format can be imported into any SQLite database.
 
 ## Database Schema
 
-The script creates a `channels` table with the following structure:
+The SQL creates a `channels` table with the following structure:
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -62,33 +77,53 @@ Located at: `scripts/playlist2sqlite.sh`
 ### Options
 
 ```
---input FILE       M3U/M3U8 file to parse (required)
---db FILE          SQLite database path (required)
---append           Append to existing database (default: recreate)
+--name NAME        Output file name, creates NAME.sql (required)
+--input FILE       M3U/M3U8 file to parse (mutually exclusive with --url)
+--url URL          M3U/M3U8 URL to download and parse (mutually exclusive with --input)
+--append           Append to existing SQL file (default: recreate)
 --verbose          Show detailed progress
 --help             Display usage information
 ```
 
 ### Examples
 
-**Basic usage:**
+**From URL (most common):**
 ```bash
-./scripts/playlist2sqlite.sh --input iptv.m3u --db iptv.db
+./scripts/playlist2sqlite.sh --url "https://provider.com/iptv.m3u" --name my-iptv
+# Output: my-iptv.sql
+```
+
+**From local file:**
+```bash
+./scripts/playlist2sqlite.sh --input iptv.m3u --name channels
+# Output: channels.sql
 ```
 
 **Append new channels:**
 ```bash
-./scripts/playlist2sqlite.sh --input additional.m3u --db iptv.db --append
+./scripts/playlist2sqlite.sh --input additional.m3u --name channels --append
 ```
 
 **With verbose output:**
 ```bash
-./scripts/playlist2sqlite.sh --input playlist.m3u --db channels.db --verbose
+./scripts/playlist2sqlite.sh --url "https://example.com/list.m3u" --name streams --verbose
+```
+
+## Importing the SQL
+
+After generating the SQL file, import it into a SQLite database:
+
+```bash
+# Create new database and import
+sqlite3 channels.db < channels.sql
+
+# Or import into existing database
+sqlite3 existing.db < channels.sql
 ```
 
 ## Querying the Database
 
-After parsing, query with standard SQLite:
+After importing, query with standard SQLite:
 
 ```bash
 # Count channels by group
@@ -106,16 +141,18 @@ sqlite3 channels.db "SELECT tvg_name FROM channels WHERE tvg_logo IS NULL OR tvg
 
 ## Common Use Cases
 
-1. **IPTV Management**: Parse provider playlists, filter/search channels, export subsets
+1. **IPTV Management**: Parse provider playlists from URLs, filter/search channels, export subsets
 2. **Playlist Analysis**: Count channels per group, identify missing metadata, find duplicates
 3. **Playlist Merging**: Combine multiple M3U files into single database, deduplicate
 4. **Channel Migration**: Extract channels from old format, transform, export to new format
 5. **EPG Integration**: Use tvg-id to link channels with Electronic Program Guide data
+6. **Backup**: Store playlist data in portable SQL format
 
 ## Notes
 
-- Script requires `bash`, `sqlite3`, and standard Unix tools (`sed`, `awk`, `grep`)
+- Script requires `bash`, `sqlite3`, `curl` (for URL mode), and standard Unix tools (`sed`, `awk`, `grep`)
 - Handles both M3U and M3U8 formats (M3U8 is UTF-8 encoded M3U)
 - Non-standard EXTINF attributes are preserved in `raw_extinf` column
 - Empty/invalid URLs are skipped with warning in verbose mode
-- Database is created if it doesn't exist
+- URL downloads use curl with automatic temp file cleanup
+- Output is `.sql` file (SQL dump), not `.db` (SQLite binary)

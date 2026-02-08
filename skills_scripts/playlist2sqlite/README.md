@@ -1,6 +1,6 @@
 # Playlist2SQLite Skill
 
-OpenClaw skill for parsing M3U/M3U8 playlists into SQLite databases.
+OpenClaw skill for parsing M3U/M3U8 playlists into portable SQL dump files.
 
 ## Structure
 
@@ -30,6 +30,19 @@ openclaw skills install playlist2sqlite.skill
 
 Or manually copy to `~/.openclaw/skills/playlist2sqlite/`
 
+## Quick Start
+
+```bash
+# Parse from URL
+./scripts/playlist2sqlite.sh --url "https://provider.com/iptv.m3u" --name my-iptv
+
+# Parse from local file
+./scripts/playlist2sqlite.sh --input playlist.m3u --name channels
+
+# Import into SQLite
+sqlite3 channels.db < channels.sql
+```
+
 ## Testing
 
 Test the script directly:
@@ -42,11 +55,28 @@ cat > test.m3u << 'EOF'
 http://stream.url/test
 EOF
 
-# Parse it
-./scripts/playlist2sqlite.sh --input test.m3u --db test.db --verbose
+# Parse from local file
+./scripts/playlist2sqlite.sh --input test.m3u --name test --verbose
 
-# Query result
+# Import and query
+sqlite3 test.db < test.sql
 sqlite3 test.db "SELECT * FROM channels;"
+
+# Test URL mode (with a public M3U if available)
+./scripts/playlist2sqlite.sh --url "https://example.com/playlist.m3u" --name remote --verbose
+sqlite3 remote.db < remote.sql
+```
+
+## Output
+
+The script produces a `.sql` file (SQL dump) that can be imported into any SQLite database:
+
+```bash
+# Creates: my-iptv.sql
+./scripts/playlist2sqlite.sh --url "https://..." --name my-iptv
+
+# Import into database
+sqlite3 my-iptv.db < my-iptv.sql
 ```
 
 ## Development
