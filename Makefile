@@ -163,7 +163,7 @@ backup-list: guard-bot
 # See README.md section "Docker Multi-Bot Deployment" for details
 # ============================================================================
 
-.PHONY: docker-build docker-up docker-down docker-logs docker-ps docker-compose-gen docker-shell docker-restart deploy-docker-host docker-stage-backup
+.PHONY: docker-build docker-up docker-down docker-logs docker-ps docker-compose-gen docker-shell docker-restart deploy-docker-host destroy-docker-host docker-stage-backup
 
 DOCKER_DIR := docker
 DOCKER_COMPOSE := docker compose -f $(DOCKER_DIR)/docker-compose.yml
@@ -261,6 +261,11 @@ deploy-docker-host:
 		exit 1; \
 	}
 	cd $(DOCKER_TF_DIR) && terraform init && terraform apply -auto-approve
+
+# Destroy Docker host infrastructure
+destroy-docker-host:
+	@echo "Destroying Docker host infrastructure..."
+	cd $(DOCKER_TF_DIR) && terraform destroy -auto-approve
 
 # SSH to Docker host
 docker-host-connect:

@@ -8,6 +8,7 @@
 
 set -euo pipefail
 exec > >(tee /var/log/stackscript.log) 2>&1
+export DEBIAN_FRONTEND=noninteractive
 
 echo "=== Docker Host Setup Started ==="
 echo "Timestamp: $(date -Iseconds)"
@@ -16,7 +17,8 @@ echo "Timestamp: $(date -Iseconds)"
 apt-get update && apt-get upgrade -y
 
 # Install Docker
-curl -fsSL https://get.docker.com | bash
+curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+sh /tmp/get-docker.sh
 
 # Install Docker Compose plugin
 apt-get install -y docker-compose-plugin
@@ -36,9 +38,10 @@ chmod 600 "$ADMIN_HOME/.ssh/authorized_keys"
 chown -R "$ADMIN_USER:$ADMIN_USER" "$ADMIN_HOME/.ssh"
 
 # Disable root login and password auth
-sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd
+echo "AllowUsers $ADMIN_USER" >> /etc/ssh/sshd_config
+systemctl restart ssh || true
 
 # Create directories for Docker deployment
 mkdir -p /opt/continuo/{backups,env,data}
@@ -79,8 +82,14 @@ apt-get install -y unattended-upgrades
 dpkg-reconfigure -plow unattended-upgrades
 
 # Install useful tools
-apt-get install -y htop iotop ncdu tmux jq
+apt-get install -y ca-certificates curl fail2ban git htop iotop jq ncdu tmux
 
 echo "=== Docker Host Setup Complete ==="
 echo "Docker version: $(docker --version)"
 echo "Docker Compose version: $(docker compose version)"
+
+# Reboot if required
+if [ -f /var/run/reboot-required ]; then
+    echo "Reboot required, scheduling reboot..."
+    systemctl reboot --no-block
+fi
