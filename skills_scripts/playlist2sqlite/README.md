@@ -52,6 +52,12 @@ sqlite3 channels.db < channels.sql
 # 🔍 Search for channels by program/event
 ./scripts/search-channel.sh --db channels.db --query "jogo do Barça"
 ./scripts/search-channel.sh --db channels.db --query "Champions League" --country BR
+
+# 📺 Generate M3U playlist with search results
+./scripts/search-channel.sh --db channels.db --query "BBB" --m3u bbb-channels.m3u
+./scripts/search-channel.sh --db channels.db --query "futebol" --m3u soccer.m3u --max 20
+
+# JSON output for integration
 ./scripts/search-channel.sh --db channels.db --query "NBA Finals" --json
 ```
 
@@ -180,6 +186,7 @@ sqlite3 my-iptv.db < my-iptv.sql
 | `--lang LANG` | Search language (pt, es, en) | pt |
 | `--max N` | Maximum results | 10 |
 | `--json` | Output as JSON | false |
+| `--m3u FILE` | Also generate M3U playlist with results | - |
 | `--verbose` | Show detailed progress | false |
 | `--no-cache` | Skip web search cache | false |
 
