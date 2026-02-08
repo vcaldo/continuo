@@ -1,0 +1,30 @@
+# terraform/modules/docker-host/terraform.tfvars.example
+# Copy to terraform.tfvars and fill in your values
+
+# Required: Linode API token
+linode_token = "your-linode-api-token"
+
+# Required: SSH public keys for access
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... your-key-comment"
+]
+
+# Optional: SSH private key path (for Terraform provisioner)
+ssh_private_key_path = "~/.ssh/id_ed25519"
+
+# Optional: Instance configuration
+hostname      = "continuo-docker"
+region        = "us-ord"
+instance_type = "g6-standard-4"  # 4 vCPU, 8GB RAM (good for 4 bots)
+admin_username = "admin"
+
+# Optional: New Relic monitoring
+# new_relic_license_key = "your-license-key"
+# new_relic_account_id  = "your-account-id"
+# new_relic_region      = "US"
+
+# Optional: Additional tags
+tags = ["production"]
+
+# Optional: Expose additional ports in firewall
+# exposed_ports = [8080, 8081]
