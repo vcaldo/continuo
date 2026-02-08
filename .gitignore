@@ -23,6 +23,9 @@ override.tf.json
 # Claude
 .claude/
 
+# Local bot selection
+.current-bot
+
 # Backups (contain sensitive data)
 backup/
 !backup/.gitkeep

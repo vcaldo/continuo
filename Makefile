@@ -1,4 +1,4 @@
-.PHONY: plan apply destroy ssh connect init backup backup-encrypt backup-list new-bot list guard-bot-name guard-bot select-workspace
+.PHONY: plan apply destroy ssh connect init backup backup-encrypt backup-list new-bot list guard-bot-name guard-bot select-workspace set-bot
 
 # ============================================================================
 # HELPERS
@@ -6,6 +6,14 @@
 
 BOTS_DIR := bots
 AVAILABLE_BOTS = $(basename $(notdir $(filter-out $(BOTS_DIR)/_template.tfvars, $(wildcard $(BOTS_DIR)/*.tfvars))))
+CURRENT_BOT_FILE := .current-bot
+
+# Load BOT from .current-bot file if not set on command line
+ifndef BOT
+ifneq (,$(wildcard $(CURRENT_BOT_FILE)))
+BOT := $(shell cat $(CURRENT_BOT_FILE))
+endif
+endif
 
 guard-bot-name:
 ifndef BOT
@@ -54,6 +62,15 @@ connect: select-workspace
 # ============================================================================
 # BOT MANAGEMENT
 # ============================================================================
+
+set-bot: guard-bot
+	@echo "$(BOT)" > $(CURRENT_BOT_FILE)
+	@echo "Active bot set to: $(BOT)"
+	@echo ""
+	@echo "You can now run commands without BOT=:"
+	@echo "  make plan"
+	@echo "  make apply"
+	@echo "  make connect"
 
 new-bot: guard-bot-name
 	@test ! -f $(BOTS_DIR)/$(BOT).tfvars || { echo "ERROR: $(BOTS_DIR)/$(BOT).tfvars already exists"; exit 1; }
