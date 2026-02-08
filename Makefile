@@ -108,6 +108,8 @@ backup: select-workspace
 	TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
 	scp $$USER@$$IP:/tmp/openclaw-backup.zip backup/$(BOT)/archives/$$TIMESTAMP.zip && \
 	echo "Archive saved: backup/$(BOT)/archives/$$TIMESTAMP.zip" && \
+	ssh $$USER@$$IP "rm -f /tmp/openclaw-backup.zip /tmp/backup.sh" && \
+	echo "Cleaned up remote backup files" && \
 	rm -rf backup/$(BOT)/latest/* && \
 	unzip -q backup/$(BOT)/archives/$$TIMESTAMP.zip -d backup/$(BOT)/latest/
 	@echo "Backup completed: backup/$(BOT)/latest/"
@@ -131,6 +133,8 @@ endif
 	TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
 	scp $(USER)@$(IP):/tmp/openclaw-backup.zip backup/$(BOT)/archives/$$TIMESTAMP.zip && \
 	echo "Archive saved: backup/$(BOT)/archives/$$TIMESTAMP.zip" && \
+	ssh $(USER)@$(IP) "rm -f /tmp/openclaw-backup.zip /tmp/backup.sh" && \
+	echo "Cleaned up remote backup files" && \
 	rm -rf backup/$(BOT)/latest/* && \
 	unzip -q backup/$(BOT)/archives/$$TIMESTAMP.zip -d backup/$(BOT)/latest/
 	@echo "Backup completed: backup/$(BOT)/latest/"
