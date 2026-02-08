@@ -126,6 +126,7 @@ resource "null_resource" "deploy_docker_files" {
       user        = var.admin_username
       private_key = file(var.ssh_private_key_path)
       host        = tolist(linode_instance.docker_host.ipv4)[0]
+      timeout     = "10m"
     }
   }
 
@@ -142,6 +143,35 @@ resource "null_resource" "deploy_docker_files" {
       user        = var.admin_username
       private_key = file(var.ssh_private_key_path)
       host        = tolist(linode_instance.docker_host.ipv4)[0]
+      timeout     = "10m"
+    }
+  }
+}
+
+# =============================================================================
+# REBOOT - Final step after all provisioning is complete
+# =============================================================================
+
+resource "null_resource" "reboot" {
+  depends_on = [null_resource.deploy_docker_files]
+
+  triggers = {
+    instance_id = linode_instance.docker_host.id
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo 'All provisioning complete. Rebooting server...'",
+      "nohup sh -c 'sleep 5 && sudo reboot' >/dev/null 2>&1 &",
+      "echo 'Reboot scheduled.'"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.admin_username
+      private_key = file(var.ssh_private_key_path)
+      host        = tolist(linode_instance.docker_host.ipv4)[0]
+      timeout     = "10m"
     }
   }
 }

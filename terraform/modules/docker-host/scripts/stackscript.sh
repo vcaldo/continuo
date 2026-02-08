@@ -105,13 +105,6 @@ else
     echo "Lazydocker installation skipped (GitHub API error)"
 fi
 
-# Write completion marker before reboot check (so Terraform's remote-exec finishes first)
 echo "=== Docker Host Setup Complete ==="
 echo "Docker version: $(docker --version)"
 echo "Docker Compose version: $(docker compose version)"
-
-# Reboot if required (use --no-block to allow script to exit cleanly)
-if [ -f /var/run/reboot-required ]; then
-    echo "Reboot required, scheduling reboot..."
-    systemctl reboot --no-block
-fi
