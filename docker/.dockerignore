@@ -1,0 +1,44 @@
+# docker/.dockerignore
+# Files to exclude from Docker build context
+
+# Git
+.git
+.gitignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfstate.d/
+
+# Backups (sensitive data - mounted at runtime, not built into image)
+backups/
+backup/
+
+# Bot configurations (contain secrets)
+bots/*.tfvars
+!bots/_template.tfvars
+
+# Local development
+.current-bot
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+*.md
+!README.md
+docs/
+
+# Generated compose files (template only)
+docker-compose.yml
+!docker-compose.yml.template
