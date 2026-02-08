@@ -1,6 +1,12 @@
 # terraform/modules/docker-host/variables.tf
 # Input variables for Docker host module
 
+variable "linode_token" {
+  description = "Linode API token"
+  type        = string
+  sensitive   = true
+}
+
 variable "hostname" {
   description = "Hostname/label for the Linode instance"
   type        = string

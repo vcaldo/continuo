@@ -3,7 +3,7 @@
 
 output "instance_ip" {
   description = "Public IP address of the Docker host"
-  value       = linode_instance.docker_host.ip_address
+  value       = tolist(linode_instance.docker_host.ipv4)[0]
 }
 
 output "instance_id" {
@@ -18,7 +18,7 @@ output "hostname" {
 
 output "ssh_connection_string" {
   description = "SSH connection command"
-  value       = "ssh -i ${var.ssh_private_key_path} ${var.admin_username}@${linode_instance.docker_host.ip_address}"
+  value       = "ssh -i ${var.ssh_private_key_path} ${var.admin_username}@${tolist(linode_instance.docker_host.ipv4)[0]}"
 }
 
 output "admin_username" {
