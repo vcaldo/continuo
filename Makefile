@@ -1,4 +1,4 @@
-.PHONY: plan apply destroy ssh connect init backup backup-encrypt backup-list new-bot list guard-bot-name guard-bot select-workspace set-bot
+.PHONY: plan apply destroy ssh connect init backup backup-external backup-encrypt backup-list new-bot list guard-bot-name guard-bot select-workspace set-bot
 
 # ============================================================================
 # HELPERS
@@ -107,6 +107,29 @@ backup: select-workspace
 	echo "Downloading backup archive..." && \
 	TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
 	scp $$USER@$$IP:/tmp/openclaw-backup.zip backup/$(BOT)/archives/$$TIMESTAMP.zip && \
+	echo "Archive saved: backup/$(BOT)/archives/$$TIMESTAMP.zip" && \
+	rm -rf backup/$(BOT)/latest/* && \
+	unzip -q backup/$(BOT)/archives/$$TIMESTAMP.zip -d backup/$(BOT)/latest/
+	@echo "Backup completed: backup/$(BOT)/latest/"
+
+backup-external:
+ifndef IP
+	@echo "ERROR: IP is required. Usage: make backup-external IP=<ip> USER=<user> BOT=<name>"; exit 1
+endif
+ifndef USER
+	@echo "ERROR: USER is required. Usage: make backup-external IP=<ip> USER=<user> BOT=<name>"; exit 1
+endif
+ifndef BOT
+	@echo "ERROR: BOT is required. Usage: make backup-external IP=<ip> USER=<user> BOT=<name>"; exit 1
+endif
+	@echo "Creating backup from external VM $(USER)@$(IP)..."
+	@mkdir -p backup/$(BOT)/latest backup/$(BOT)/archives
+	@echo "Connecting to $(USER)@$(IP)..." && \
+	scp scripts/backup.sh $(USER)@$(IP):/tmp/backup.sh && \
+	ssh $(USER)@$(IP) "chmod +x /tmp/backup.sh && /tmp/backup.sh" && \
+	echo "Downloading backup archive..." && \
+	TIMESTAMP=$$(date +%Y-%m-%d_%H%M%S) && \
+	scp $(USER)@$(IP):/tmp/openclaw-backup.zip backup/$(BOT)/archives/$$TIMESTAMP.zip && \
 	echo "Archive saved: backup/$(BOT)/archives/$$TIMESTAMP.zip" && \
 	rm -rf backup/$(BOT)/latest/* && \
 	unzip -q backup/$(BOT)/archives/$$TIMESTAMP.zip -d backup/$(BOT)/latest/
