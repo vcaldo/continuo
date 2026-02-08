@@ -2,10 +2,13 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+terraform.tfstate.d/
 .terraform.lock.hcl
 
 # Variables with secrets
 terraform.tfvars
+bots/*.tfvars
+!bots/_template.tfvars
 
 # Crash logs
 crash.log
