@@ -52,9 +52,8 @@ resource "linode_instance" "docker_host" {
   # Wait for StackScript to complete
   provisioner "remote-exec" {
     inline = [
-      "echo 'Waiting for cloud-init and StackScript to complete...'",
-      "cloud-init status --wait || true",
-      "while [ ! -f /var/log/stackscript.log ] || ! grep -q 'Docker Host Setup Complete' /var/log/stackscript.log; do sleep 5; done",
+      "echo 'Waiting for StackScript to complete...'",
+      "while ! sudo grep -q 'Docker Host Setup Complete' /var/log/stackscript.log 2>/dev/null; do echo 'Still waiting...'; sleep 10; done",
       "echo 'Setup complete!'"
     ]
 
@@ -63,7 +62,7 @@ resource "linode_instance" "docker_host" {
       user        = var.admin_username
       private_key = file(var.ssh_private_key_path)
       host        = tolist(self.ipv4)[0]
-      timeout     = "10m"
+      timeout     = "30m"
     }
   }
 }
