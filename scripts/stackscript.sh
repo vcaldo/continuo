@@ -77,7 +77,7 @@ apt -qqy install \
     ufw \
     unzip \
     vim \
-    unzip \
+    zip \
     yq
 echo "Essential packages installed successfully"
 

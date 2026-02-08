@@ -55,5 +55,5 @@ variable "region" {
 variable "instance_type" {
   description = "Linode instance type (size)"
   type        = string
-  default     = "g6-standard-2"
+  default     = "g6-standard-1"
 }
