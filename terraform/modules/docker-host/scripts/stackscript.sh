@@ -54,8 +54,8 @@ chown -R "$ADMIN_USER:$ADMIN_USER" "$ADMIN_HOME/.ssh"
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 echo "AllowUsers $ADMIN_USER" >> /etc/ssh/sshd_config
-# Note: SSH restart is deferred to avoid dropping Terraform's connection
-# It will restart on reboot, or we'll restart it at the very end
+# Note: SSH configuration changes will take effect on next reboot
+# No restart needed here to avoid dropping Terraform's connection
 
 # Create directories for Docker deployment
 mkdir -p /opt/continuo/{backups,env,data}
@@ -158,11 +158,3 @@ echo "=== Docker Host Setup Complete ==="
 echo "Docker version: $(docker --version)"
 echo "Docker Compose version: $(docker compose version)"
 echo "completed" > "$PHASE_FILE"
-
-# Restart SSH to apply security configuration (done after completion marker)
-# This allows Terraform to see completion before the connection is dropped
-if [ "$PHASE" = "initial" ]; then
-    echo "Restarting SSH service to apply security configuration..."
-    sleep 2  # Give Terraform time to read the completion marker
-    systemctl restart ssh || true
-fi
