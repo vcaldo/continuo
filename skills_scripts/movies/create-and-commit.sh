@@ -223,6 +223,9 @@ ${MOVIE_SYNOPSIS}
 EOF
 }
 
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Commit and push changes
 commit_and_push() {
     local filepath="$1"
@@ -248,6 +251,18 @@ commit_and_push() {
     
     log_info "Committing: $commit_msg"
     git commit -m "$commit_msg"
+    
+    # Update index
+    log_info "Updating INDEX.md..."
+    if bash "$SCRIPT_DIR/update-index.sh" "$REPO_DIR"; then
+        log_success "Index updated"
+        if ! git diff --quiet INDEX.md 2>/dev/null; then
+            git add INDEX.md
+            git commit -m "chore: update INDEX.md with new movie"
+        fi
+    else
+        log_warning "Failed to update index (non-fatal)"
+    fi
     
     log_info "Pushing to origin/main..."
     if ! git push origin main 2>&1; then
