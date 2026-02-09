@@ -13,6 +13,7 @@ This skill enables an AI agent to catalog movies when users mention them. It sea
 | `SKILL.md` | Agent instructions - how to use this skill |
 | `create-and-commit.sh` | Main script - creates entry and pushes to repo |
 | `add-movie.sh` | Template script - creates template for manual editing |
+| `update-index.sh` | Generates INDEX.md from all movies (called automatically) |
 | `README.md` | This file - developer documentation |
 
 ## Quick Start
@@ -67,6 +68,27 @@ DRY_RUN=1 MOVIE_TITLE="Test" ./create-and-commit.sh
 ```bash
 ./add-movie.sh "Movie Name" [year]
 ./add-movie.sh -h  # Show help
+```
+
+### update-index.sh
+
+Generates INDEX.md with all movies from to-watch/ and watched/ directories.
+
+```bash
+./update-index.sh [REPO_DIR]
+# REPO_DIR defaults to /tmp/movies
+```
+
+**Features:**
+- Extracts title, year, director, and genres from each movie file
+- Sorts alphabetically, ignoring articles (The, A, An, O, El, La...)
+- Creates linked tables for easy navigation
+- Called automatically by `create-and-commit.sh`
+
+**Manual regeneration:**
+```bash
+./update-index.sh /tmp/movies
+cd /tmp/movies && git add INDEX.md && git commit -m "chore: update index" && git push
 ```
 
 ## Output Format

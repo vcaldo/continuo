@@ -185,6 +185,16 @@ Two imprisoned men bond over a number of years...
 *Added to catalog: 2024-01-15*
 ```
 
+### Automatic Index Update
+
+The script automatically updates INDEX.md after adding a movie:
+- Scans all movies in to-watch/ and watched/
+- Sorts alphabetically by title (ignoring articles like "The", "A", "O", "El")
+- Generates tables with links to each movie file
+- Commits index update if changed
+
+No manual action needed - the index stays synchronized.
+
 ## Best Practices
 
 1. **Always search for current information** - Ratings and streaming availability change
