@@ -38,7 +38,12 @@ web_search: "[Movie Title] movie [year if known] IMDb Rotten Tomatoes ratings di
 | Streaming | Where to watch | "Netflix, Amazon Prime" |
 | Poster | High-quality image URL | "https://..." |
 
-> **Tip:** For poster URLs, TMDB, IMDb, and Letterboxd have high-quality images. Prefer HTTPS URLs.
+> **Important - Poster URLs:** 
+> - The script automatically validates poster URLs (HTTP 200 check)
+> - Use TMDB for reliable posters: `https://image.tmdb.org/t/p/w500/[poster_path].jpg`
+> - Find poster_path on TMDB movie page → Images → Posters
+> - Example: `https://www.themoviedb.org/movie/408537-el-ciudadano-ilustre/images/posters`
+> - If URL is invalid (404), the script will clear it automatically
 
 ### Step 2: Create the Movie Entry
 

@@ -143,6 +143,22 @@ setup_repo() {
     mkdir -p "$TARGET_DIR"
 }
 
+# Validate poster URL by checking HTTP status
+validate_poster_url() {
+    if [ -n "${MOVIE_POSTER:-}" ]; then
+        log_info "Validating poster URL..."
+        local status
+        status=$(curl -sI "$MOVIE_POSTER" -o /dev/null -w '%{http_code}' --max-time 5 2>/dev/null || echo "000")
+        
+        if [ "$status" = "200" ]; then
+            log_success "Poster URL valid (HTTP $status)"
+        else
+            log_warning "Poster URL returned HTTP $status - clearing poster"
+            MOVIE_POSTER=""
+        fi
+    fi
+}
+
 # Check if movie already exists
 check_existing() {
     local filename="$1"
@@ -268,6 +284,9 @@ main() {
     
     # Validate inputs
     validate_inputs
+    
+    # Validate poster URL
+    validate_poster_url
     
     # Generate filename
     local filename
