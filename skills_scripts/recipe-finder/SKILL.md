@@ -11,11 +11,13 @@ Busca e sugere receitas de sites brasileiros populares para inspiração culiná
 
 ## Fontes de Receitas
 
-Buscar receitas nestes sites brasileiros (em ordem de preferência):
+Buscar receitas nestes sites brasileiros (em ordem de preferência para **extração**):
 
-1. **Panelinha** (panelinha.com.br) - Receitas autorais de Rita Lobo
-2. **TudoGostoso** (tudogostoso.com.br) - Maior acervo de receitas do Brasil
-3. **Receiteria** (receiteria.com.br) - Receitas práticas e bem explicadas
+1. **Panelinha** (panelinha.com.br) - Receitas autorais de Rita Lobo ✅
+2. **Receiteria** (receiteria.com.br) - Receitas práticas e bem explicadas ✅
+3. **TudoGostoso** (tudogostoso.com.br) - Maior acervo de receitas do Brasil ⚠️
+
+> ⚠️ **Nota sobre TudoGostoso:** Este site usa proteção Cloudflare que bloqueia `web_fetch`. Use para descoberta via `web_search`, mas prefira Panelinha ou Receiteria quando precisar extrair a receita completa. Alternativamente, use `browser` tool para acessar TudoGostoso quando necessário.
 
 ## Como Buscar
 
