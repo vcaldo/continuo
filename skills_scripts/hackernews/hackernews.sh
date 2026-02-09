@@ -35,7 +35,7 @@ if [ "$FETCH_COUNT" -gt 100 ]; then
     FETCH_COUNT=100
 fi
 
-API_URL="https://hn.algolia.com/api/v1/search?tags=story&numericFilters=created_at_i>${TIMESTAMP}&hitsPerPage=${FETCH_COUNT}"
+API_URL="https://hn.algolia.com/api/v1/search?tags=story&numericFilters=created_at_i%3E${TIMESTAMP}&hitsPerPage=${FETCH_COUNT}"
 
 # Faz request e formata saída
 curl -s "$API_URL" | jq -r --argjson count "$COUNT" '
