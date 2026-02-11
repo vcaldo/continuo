@@ -97,3 +97,107 @@ Per bot, Terraform creates:
 - **Linode instance** (Ubuntu 24.04) provisioned with OpenClaw via a StackScript
 - **Firewall** allowing inbound SSH (port 22) only, all outbound traffic allowed
 - **Admin user** with SSH key access (root login disabled by the StackScript)
+
+---
+
+## Docker Multi-Bot Deployment
+
+Run multiple bots on a single Linode using Docker containers. Each bot gets:
+- **Isolated network** (no inter-container communication)
+- **Dedicated volume** for persistent state
+- **Resource limits** (1 CPU, 1.5GB RAM per container)
+
+### Quick Start (Local Docker)
+
+```bash
+# 1. Stage backups for Docker deployment
+make backup BOT=my-first-bot
+make docker-stage-backup BOT=my-first-bot
+
+make backup BOT=my-second-bot
+make docker-stage-backup BOT=my-second-bot
+
+# 2. (Optional) Add environment files for bot-specific secrets
+cp docker/env/_template.env docker/env/my-first-bot.env
+# Edit with your secrets
+
+# 3. Generate docker-compose.yml and start containers
+make deploy-docker
+```
+
+### Docker Commands
+
+```bash
+make docker-build          # Build the base OpenClaw image
+make docker-compose-gen    # Generate docker-compose.yml from backups
+make docker-up             # Start all containers
+make docker-down           # Stop all containers
+make docker-ps             # Show container status
+make docker-logs           # View logs (all bots)
+make docker-logs BOT=name  # View logs (specific bot)
+make docker-shell BOT=name # Shell into a container
+make docker-restart        # Restart all containers
+make docker-restart BOT=name  # Restart specific bot
+```
+
+### Remote Docker Host Deployment
+
+Deploy to a dedicated Linode running Docker:
+
+```bash
+# 1. Configure the Docker host
+cp terraform/modules/docker-host/terraform.tfvars.example \
+   terraform/modules/docker-host/terraform.tfvars
+# Edit with your Linode token and SSH keys
+
+# 2. Deploy the Docker host (creates Linode + installs Docker)
+make deploy-docker-host
+
+# 3. Stage backups and sync to remote
+make docker-stage-backup BOT=my-bot
+make docker-sync
+
+# 4. Start containers on remote host
+make docker-remote-up
+```
+
+### Docker Directory Structure
+
+```
+docker/
+├── Dockerfile                 # Base OpenClaw image
+├── docker-compose.yml         # Generated (gitignored)
+├── docker-compose.yml.template
+├── backups/                   # Bot backup files (gitignored)
+│   ├── .gitkeep
+│   ├── my-first-bot.zip
+│   └── my-second-bot.zip
+├── env/                       # Bot environment files (gitignored)
+│   ├── _template.env
+│   └── my-first-bot.env
+├── configs/
+│   └── supervisord.conf
+└── scripts/
+    ├── entrypoint.sh
+    ├── restore-backup.sh
+    ├── healthcheck.sh
+    └── generate-compose.sh
+```
+
+### How It Works
+
+1. **Single base image**: `openclaw-base:latest` is shared by all bots
+2. **Volume-mounted state**: Each bot's data persists in a Docker volume
+3. **First-boot restoration**: Backup tarball is extracted on first container start
+4. **Supervisor process manager**: Runs OpenClaw gateway as a managed service
+5. **Network isolation**: Each bot has its own bridge network with ICC disabled
+
+### Resource Sizing
+
+| Linode Type | RAM | vCPUs | Recommended Bots |
+|-------------|-----|-------|------------------|
+| g6-standard-2 | 4GB | 2 | 2 bots |
+| g6-standard-4 | 8GB | 4 | 4 bots |
+| g6-standard-6 | 16GB | 6 | 8 bots |
+
+Each bot container is limited to 1 CPU and 1.5GB RAM by default.

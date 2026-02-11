@@ -155,3 +155,145 @@ backup-list: guard-bot
 	@echo ""
 	@echo "Latest backup:"
 	@ls -la backup/$(BOT)/latest/ 2>/dev/null || echo "  No latest backup found"
+
+# ============================================================================
+# DOCKER DEPLOYMENT
+# ============================================================================
+# Multi-bot deployment using Docker containers on a single Linode
+# See README.md section "Docker Multi-Bot Deployment" for details
+# ============================================================================
+
+.PHONY: docker-build docker-up docker-down docker-logs docker-ps docker-compose-gen docker-shell docker-restart deploy-docker-host destroy-docker-host docker-stage-backup
+
+DOCKER_DIR := docker
+DOCKER_COMPOSE := docker compose -f $(DOCKER_DIR)/docker-compose.yml
+
+# Build the base OpenClaw Docker image
+docker-build:
+	@echo "Building OpenClaw base image..."
+	docker build -t openclaw-base:latest -f $(DOCKER_DIR)/Dockerfile $(DOCKER_DIR)
+	@echo "Image built: openclaw-base:latest"
+
+# Generate docker-compose.yml from backups directory
+docker-compose-gen:
+	@echo "Generating docker-compose.yml..."
+	@chmod +x $(DOCKER_DIR)/scripts/generate-compose.sh
+	@$(DOCKER_DIR)/scripts/generate-compose.sh
+	@echo "Generated: $(DOCKER_DIR)/docker-compose.yml"
+
+# Start all bot containers (builds image if needed)
+docker-up: docker-build docker-compose-gen
+	@echo "Starting bot containers..."
+	$(DOCKER_COMPOSE) up -d
+	@echo ""
+	@echo "Containers started. View logs with: make docker-logs"
+	@$(DOCKER_COMPOSE) ps
+
+# Stop all bot containers
+docker-down:
+	@echo "Stopping bot containers..."
+	$(DOCKER_COMPOSE) down
+	@echo "Containers stopped."
+
+# View logs (all bots or specific bot)
+docker-logs:
+ifdef BOT
+	$(DOCKER_COMPOSE) logs -f $(BOT)
+else
+	$(DOCKER_COMPOSE) logs -f
+endif
+
+# Show container status
+docker-ps:
+	$(DOCKER_COMPOSE) ps -a
+
+# Shell into a specific bot container
+docker-shell: guard-bot-name
+	@echo "Connecting to bot-$(BOT)..."
+	docker exec -it bot-$(BOT) bash
+
+# Restart a specific bot or all bots
+docker-restart:
+ifdef BOT
+	@echo "Restarting $(BOT)..."
+	$(DOCKER_COMPOSE) restart $(BOT)
+else
+	@echo "Restarting all bots..."
+	$(DOCKER_COMPOSE) restart
+endif
+
+# Stage a backup for Docker deployment (copies to docker/backups/)
+docker-stage-backup: guard-bot
+	@echo "Staging backup for $(BOT)..."
+	@test -d backup/$(BOT)/archives || { echo "ERROR: No backups found for $(BOT). Run 'make backup BOT=$(BOT)' first."; exit 1; }
+	@LATEST=$$(ls -t backup/$(BOT)/archives/*.zip 2>/dev/null | head -1) && \
+	test -n "$$LATEST" || { echo "ERROR: No .zip backup found"; exit 1; } && \
+	mkdir -p $(DOCKER_DIR)/backups && \
+	cp "$$LATEST" $(DOCKER_DIR)/backups/$(BOT).zip && \
+	echo "Staged: $(DOCKER_DIR)/backups/$(BOT).zip"
+
+# Full Docker deployment workflow
+deploy-docker: docker-compose-gen docker-build docker-up
+	@echo ""
+	@echo "=========================================="
+	@echo "Docker deployment complete!"
+	@echo "=========================================="
+	@echo ""
+	@echo "Useful commands:"
+	@echo "  make docker-ps        # Show container status"
+	@echo "  make docker-logs      # View all logs"
+	@echo "  make docker-logs BOT=<name>  # View specific bot logs"
+	@echo "  make docker-shell BOT=<name> # Shell into container"
+	@echo "  make docker-restart   # Restart all containers"
+
+# ============================================================================
+# DOCKER HOST TERRAFORM (for remote deployment)
+# ============================================================================
+
+DOCKER_TF_DIR := terraform/modules/docker-host
+
+# Deploy Docker host infrastructure (Linode + Docker setup)
+deploy-docker-host:
+	@echo "Deploying Docker host infrastructure..."
+	@test -f $(DOCKER_TF_DIR)/terraform.tfvars || { \
+		echo "ERROR: $(DOCKER_TF_DIR)/terraform.tfvars not found."; \
+		echo "Copy terraform/modules/docker-host/terraform.tfvars.example and configure."; \
+		exit 1; \
+	}
+	cd $(DOCKER_TF_DIR) && terraform init && terraform apply -auto-approve
+
+# Destroy Docker host infrastructure
+destroy-docker-host:
+	@echo "Destroying Docker host infrastructure..."
+	cd $(DOCKER_TF_DIR) && terraform destroy -auto-approve
+
+# SSH to Docker host
+docker-host-connect:
+	@cd $(DOCKER_TF_DIR) && eval $$(terraform output -raw ssh_connection_string)
+
+# Sync Docker files to remote host
+docker-sync:
+	@cd $(DOCKER_TF_DIR) && \
+	IP=$$(terraform output -raw instance_ip) && \
+	USER=$$(terraform output -raw admin_username) && \
+	echo "Syncing Docker files to $$USER@$$IP..." && \
+	rsync -avz --delete \
+		--exclude 'docker-compose.yml' \
+		--exclude '*.tfstate*' \
+		--exclude '.terraform' \
+		$(DOCKER_DIR)/ $$USER@$$IP:/opt/continuo/docker/
+	@echo "Sync complete. Run 'make docker-remote-up' to start containers."
+
+# Start containers on remote Docker host
+docker-remote-up:
+	@cd $(DOCKER_TF_DIR) && \
+	IP=$$(terraform output -raw instance_ip) && \
+	USER=$$(terraform output -raw admin_username) && \
+	ssh $$USER@$$IP "cd /opt/continuo/docker && docker build -t openclaw-base:latest . && docker compose up -d"
+
+# Stop containers on remote Docker host
+docker-remote-down:
+	@cd $(DOCKER_TF_DIR) && \
+	IP=$$(terraform output -raw instance_ip) && \
+	USER=$$(terraform output -raw admin_username) && \
+	ssh $$USER@$$IP "cd /opt/continuo/docker && docker compose down"

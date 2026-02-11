@@ -1,0 +1,66 @@
+# docker/docker-compose.yml.template
+# Template for multi-bot Docker Compose deployment
+# Generate actual docker-compose.yml using: make docker-compose-gen
+#
+# This template shows the structure for a single bot.
+# The Makefile generates a complete file with all configured bots.
+
+version: "3.8"
+
+# =============================================================================
+# EXAMPLE SERVICE (uncomment and duplicate for each bot)
+# =============================================================================
+# services:
+#   example-bot:
+#     image: openclaw-base:latest
+#     container_name: bot-example-bot
+#     hostname: example-bot
+#     networks:
+#       - net-example-bot
+#     volumes:
+#       - data-example-bot:/data
+#       - ./backups/example-bot.zip:/backups/backup.zip:ro
+#     environment:
+#       - BOT_NAME=example-bot
+#       - GATEWAY_PORT=8080
+#       # Add bot-specific env vars here or mount env file:
+#       # - TELEGRAM_BOT_TOKEN=xxx
+#     env_file:
+#       - ./env/example-bot.env  # Optional: bot-specific secrets
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: "1.0"
+#           memory: 1536M
+#         reservations:
+#           memory: 512M
+#     restart: unless-stopped
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+
+# =============================================================================
+# GENERATED SERVICES
+# The following will be populated by make docker-compose-gen
+# =============================================================================
+
+services:
+${BOT_SERVICES}
+
+# =============================================================================
+# NETWORKS
+# Each bot gets an isolated bridge network with ICC disabled
+# =============================================================================
+
+networks:
+${BOT_NETWORKS}
+
+# =============================================================================
+# VOLUMES
+# Named volumes for persistent bot data
+# =============================================================================
+
+volumes:
+${BOT_VOLUMES}

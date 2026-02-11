@@ -29,3 +29,18 @@ override.tf.json
 # Backups (contain sensitive data)
 backup/
 !backup/.gitkeep
+
+# Docker
+docker/docker-compose.yml
+docker/backups/*.zip
+docker/backups/*.tar.gz
+!docker/backups/.gitkeep
+docker/env/*.env
+!docker/env/_template.env
+!docker/env/.gitkeep
+
+# Terraform module state (docker-host)
+terraform/modules/docker-host/.terraform/
+terraform/modules/docker-host/*.tfstate
+terraform/modules/docker-host/*.tfstate.*
+terraform/modules/docker-host/terraform.tfvars
